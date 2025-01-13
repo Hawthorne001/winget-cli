@@ -42,10 +42,7 @@ BeforeAll {
             Get-WinGetSource -Name 'TestSource'
         }
         catch {
-            # TODO: Add-WinGetSource does not support setting trust level yet.
-            # Add-WinGetSource -Name 'TestSource' -Arg 'https://localhost:5001/TestKit/'
-            $sourceAddCommand = "${wingetExeName} source add TestSource https://localhost:5001/TestKit/ --trust-level trusted"
-            Invoke-Expression -Command $sourceAddCommand
+            Add-WinGetSource -Name 'TestSource' -Arg 'https://localhost:5001/TestKit/' -TrustLevel 'Trusted'
         }
     }
 
@@ -126,6 +123,38 @@ BeforeAll {
     {
         return Join-Path -Path $env:Temp -ChildPath "WingetPwshTest-$(New-Guid)"
     }
+
+    function Validate-WinGetResultCommonFields([psobject]$result, [psobject]$expected) {
+        $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
+        $result.Id | Should -Be $expected.Id
+        $result.Name | Should -Be $expected.Name
+        $result.Source | Should -Be $expected.Source
+        $result.Status | Should -Be $expected.Status
+    }
+
+    function Validate-WinGetPackageOperationResult([psobject]$result, [psobject]$expected, [string]$operationType)
+    {
+        Validate-WinGetResultCommonFields $result $expected
+        $result.RebootRequired | Should -Be $expected.RebootRequired
+
+        switch ($operationType) {
+            'install' {
+                $result.InstallerErrorCode | Should -Be $expected.InstallerErrorCode
+            }
+            'update' {
+                $result.InstallerErrorCode | Should -Be $expected.InstallerErrorCode
+            }
+            'repair' {
+                $result.RepairErrorCode | Should -Be $expected.RepairErrorCode
+            }
+            'uninstall' {
+                $result.UninstallerErrorCode | Should -Be $expected.UninstallerErrorCode
+            }
+            default {
+                throw "Unknown operation type: $operationType"
+            }
+        }
+    }
 }
 
 Describe 'Get-WinGetVersion' {
@@ -136,10 +165,25 @@ Describe 'Get-WinGetVersion' {
     }
 }
 
+Describe 'Reset-WinGetSource' {
+    BeforeAll {
+        AddTestSource
+    }
+
+    # Requires admin
+    It 'Resets all sources' {
+        Reset-WinGetSource -All
+    }
+
+    It 'Test source should be removed' {
+        { Get-WinGetSource -Name 'TestSource' } | Should -Throw
+    }
+}
+
 Describe 'Get|Add|Reset-WinGetSource' {
 
     BeforeAll {
-        AddTestSource
+        Add-WinGetSource -Name 'TestSource' -Arg 'https://localhost:5001/TestKit/' -TrustLevel 'Trusted' -Explicit
     }
 
     It 'Get Test source' {
@@ -149,6 +193,8 @@ Describe 'Get|Add|Reset-WinGetSource' {
         $source.Name | Should -Be 'TestSource'
         $source.Argument | Should -Be 'https://localhost:5001/TestKit/'
         $source.Type | Should -Be 'Microsoft.PreIndexed.Package'
+        $source.TrustLevel | Should -Be 'Trusted'
+        $source.Explicit | Should -Be $true
     }
 
     It 'Get fake source' {
@@ -220,76 +266,56 @@ Describe 'Install|Update|Uninstall-WinGetPackage' {
         AddTestSource
     }
 
+    BeforeEach {
+        $expectedExeInstallerResult = [PSCustomObject]@{
+            Id = "AppInstallerTest.TestExeInstaller"
+            Name = "TestExeInstaller"
+            Source = "TestSource"
+            Status = 'Ok'
+            RebootRequired = 'False'
+            InstallerErrorCode = 0
+            UninstallerErrorCode = 0
+        }
+
+        $expectedPortableInstallerResult = [PSCustomObject]@{
+            Id = "AppInstallerTest.TestPortableExe"
+            Name = "TestPortableExe"
+            Source = "TestSource"
+            Status = 'Ok'
+            RebootRequired = 'False'
+            InstallerErrorCode = 0
+            UninstallerErrorCode = 0
+        }
+    }
+
     It 'Install by Id' {
         $result = Install-WinGetPackage -Id AppInstallerTest.TestExeInstaller -Version '1.0.0.0'
-
-        $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
-        $result.Id | Should -Be "AppInstallerTest.TestExeInstaller"
-        $result.Name | Should -Be "TestExeInstaller"
-        $result.Source | Should -Be "TestSource"
-        $result.InstallerErrorCode | Should -Be 0
-        $result.Status | Should -Be 'Ok'
-        $result.RebootRequired | Should -Be 'False'
+        Validate-WinGetPackageOperationResult $result $expectedExeInstallerResult 'install'
     }
 
     It 'Install by exact Name and Version' {
         $result = Install-WinGetPackage -Name TestPortableExe -Version '2.0.0.0' -MatchOption Equals
-
-        $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
-        $result.Id | Should -Be "AppInstallerTest.TestPortableExe"
-        $result.Name | Should -Be "TestPortableExe"
-        $result.Source | Should -Be "TestSource"
-        $result.InstallerErrorCode | Should -Be 0
-        $result.Status | Should -Be 'Ok'
-        $result.RebootRequired | Should -Be 'False'
+        Validate-WinGetPackageOperationResult $result $expectedPortableInstallerResult 'install'
     }
 
     It 'Update by Id' {
         $result = Update-WinGetPackage -Id AppInstallerTest.TestExeInstaller
-
-        $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
-        $result.Id | Should -Be "AppInstallerTest.TestExeInstaller"
-        $result.Name | Should -Be "TestExeInstaller"
-        $result.Source | Should -Be "TestSource"
-        $result.InstallerErrorCode | Should -Be 0
-        $result.Status | Should -Be 'Ok'
-        $result.RebootRequired | Should -Be 'False'
+        Validate-WinGetPackageOperationResult $result $expectedExeInstallerResult 'update'
     }
 
     It 'Update by Name' {
         $result = Update-WinGetPackage -Name TestPortableExe
-
-        $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
-        $result.Id | Should -Be "AppInstallerTest.TestPortableExe"
-        $result.Name | Should -Be "TestPortableExe"
-        $result.Source | Should -Be "TestSource"
-        $result.InstallerErrorCode | Should -Be 0
-        $result.Status | Should -Be 'Ok'
-        $result.RebootRequired | Should -Be 'False'
+        Validate-WinGetPackageOperationResult $result $expectedPortableInstallerResult 'update'
     }
 
     It 'Uninstall by Id' {
         $result = Uninstall-WinGetPackage -Id AppInstallerTest.TestExeInstaller
-
-        $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
-        $result.Id | Should -Be "AppInstallerTest.TestExeInstaller"
-        $result.Name | Should -Be "TestExeInstaller"
-        $result.Source | Should -Be "TestSource"
-        $result.UninstallerErrorCode | Should -Be 0
-        $result.Status | Should -Be 'Ok'
-        $result.RebootRequired | Should -Be 'False'
+        Validate-WinGetPackageOperationResult $result $expectedExeInstallerResult 'uninstall'
     }
 
     It 'Uninstall by Name' {
         $result = Uninstall-WinGetPackage -Name TestPortableExe
-
-        $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
-        $result.Id | Should -Be "AppInstallerTest.TestPortableExe"
-        $result.Name | Should -Be "TestPortableExe"
-        $result.Source | Should -Be "TestSource"
-        $result.UninstallerErrorCode | Should -Be 0
-        $result.Status | Should -Be 'Ok'
-        $result.RebootRequired | Should -Be 'False'
+        Validate-WinGetPackageOperationResult $result $expectedPortableInstallerResult 'uninstall'
     }
 
     AfterAll {
@@ -305,7 +331,161 @@ Describe 'Install|Update|Uninstall-WinGetPackage' {
         {
             Uninstall-WinGetPackage -Id AppInstallerTest.TestPortableExe
         }
-   }
+    }
+}
+
+Describe 'Install|Repair|Uninstall-WinGetPackage' {
+
+    BeforeAll {
+        AddTestSource
+    }
+
+    Context 'MSIX Repair Scenario' {
+        BeforeEach {
+            $expectedResult = [PSCustomObject]@{
+                Id = "AppInstallerTest.TestMsixInstaller"
+                Name = "TestMsixInstaller"
+                Source = "TestSource"
+                Status = 'Ok'
+                RebootRequired = 'False'
+                InstallerErrorCode = 0
+                RepairErrorCode = 0
+                UninstallerErrorCode = 0
+            }
+        }
+
+        It 'Install MSIX By Id' {
+            $result = Install-WinGetPackage -Id AppInstallerTest.TestMsixInstaller
+            Validate-WinGetPackageOperationResult $result $expectedResult 'install'
+        }
+
+        It 'Repair MSIX By Id' {
+            $result = Repair-WinGetPackage -Id AppInstallerTest.TestMsixInstaller
+            Validate-WinGetPackageOperationResult $result $expectedResult 'repair'
+        }
+
+        It 'Uninstall MSIX By Id' {
+            $result = Uninstall-WinGetPackage -Id AppInstallerTest.TestMsixInstaller
+            Validate-WinGetPackageOperationResult $result $expectedResult 'uninstall'
+        }
+    }
+
+    Context 'Burn installer "Modify" Repair Scenario' {
+        BeforeEach {
+            $expectedResult = [PSCustomObject]@{
+                Id = "AppInstallerTest.TestModifyRepair"
+                Name = "TestModifyRepair"
+                Source = "TestSource"
+                Status = 'Ok'
+                RebootRequired = 'False'
+                InstallerErrorCode = 0
+                RepairErrorCode = 0
+                UninstallerErrorCode = 0
+            }
+        }
+
+        It 'Install Burn Installer By Id' {
+            $result = Install-WinGetPackage -Id AppInstallerTest.TestModifyRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'install'
+        }
+
+        It 'Repair Burn Installer By Id' {
+            $result = Repair-WinGetPackage -Id AppInstallerTest.TestModifyRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'repair'
+        }
+
+        It 'Uninstall Burn Installer By Id' {
+            $result = Uninstall-WinGetPackage -Id AppInstallerTest.TestModifyRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'uninstall'
+        }
+    }
+
+    Context 'Exe Installer "Uninstaller" Repair Scenario' {
+        BeforeEach {
+            $expectedResult = [PSCustomObject]@{
+                Id = "AppInstallerTest.UninstallerRepair"
+                Name = "UninstallerRepair"
+                Source = "TestSource"
+                Status = 'Ok'
+                RebootRequired = 'False'
+                InstallerErrorCode = 0
+                RepairErrorCode = 0
+                UninstallerErrorCode = 0
+            }
+        }
+
+        It 'Install Exe Installer By Id' {
+            $result = Install-WinGetPackage -Id AppInstallerTest.UninstallerRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'install'
+        }
+
+        It 'Uninstaller Repair Exe Installer By Id' {
+            $result = Repair-WinGetPackage -Id AppInstallerTest.UninstallerRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'repair'
+        }
+
+        It "Uninstall Exe Installer By Id" {
+            $result = Uninstall-WinGetPackage -Id AppInstallerTest.UninstallerRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'uninstall'
+        }
+    }
+
+    Context 'Inno "Installer" Repair Scenario' {
+        BeforeEach {
+            $expectedResult = [PSCustomObject]@{
+                Id = "AppInstallerTest.TestInstallerRepair"
+                Name = "TestInstallerRepair"
+                Source = "TestSource"
+                Status = 'Ok'
+                RebootRequired = 'False'
+                InstallerErrorCode = 0
+                RepairErrorCode = 0
+                UninstallerErrorCode = 0
+            }
+        }
+
+        It 'Install Exe Installer By Id' {
+            $result = Install-WinGetPackage -Id AppInstallerTest.TestInstallerRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'install'
+        }
+
+        It 'Installer Repair Exe Installer By Id' {
+            $result = Repair-WinGetPackage -Id AppInstallerTest.TestInstallerRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'repair'
+        }
+
+        It "Uninstall Exe Installer By Id" {
+            $result = Uninstall-WinGetPackage -Id AppInstallerTest.TestInstallerRepair
+            Validate-WinGetPackageOperationResult $result $expectedResult 'uninstall'
+        }
+    }
+
+    AfterAll {
+        # Uninstall all test packages after each  for proper cleanup.
+        $testMsix = Get-WinGetPackage -Id AppInstallerTest.TestMsixInstaller
+        if ($testMsix.Count -gt 0)
+        {
+            Uninstall-WinGetPackage -Id AppInstallerTest.TestMsixInstaller
+        }
+
+        $testBurn = Get-WinGetPackage -Id AppInstallerTest.TestModifyRepair
+        if ($testBurn.Count -gt 0)
+        {
+            Uninstall-WinGetPackage -Id AppInstallerTest.TestModifyRepair
+        }
+
+        $testExe = Get-WinGetPackage -Id AppInstallerTest.UninstallerRepair
+        if ($testExe.Count -gt 0)
+        {
+            Uninstall-WinGetPackage -Id AppInstallerTest.UninstallerRepair
+        }
+
+        $testInno = Get-WinGetPackage -Id AppInstallerTest.TestInstallerRepair
+        if ($testInno.Count -gt 0)
+        {
+            Uninstall-WinGetPackage -Id AppInstallerTest.TestInstallerRepair
+        }
+    }
 }
 
 Describe 'Get-WinGetPackage' {
@@ -427,13 +607,13 @@ Describe 'Export-WinGetPackage' {
     }
 }
 
-Describe 'Get-WinGetUserSettings' {
+Describe 'Get-WinGetUserSetting' {
 
-    It 'Get settings' {
+    It 'Get setting' {
         $ogSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
         SetWinGetSettingsHelper $ogSettings
 
-        $userSettings = Get-WinGetUserSettings
+        $userSettings = Get-WinGetUserSetting
         $userSettings | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $userSettings.Count | Should -Be 2
         $userSettings.visual.progressBar | Should -Be 'rainbow'
@@ -443,31 +623,31 @@ Describe 'Get-WinGetUserSettings' {
 
     It 'Get settings. Bad json file' {
         Set-Content -Path $settingsFilePath -Value "Hi, im not a json. Thank you, Test."
-        { Get-WinGetUserSettings } | Should -Throw
+        { Get-WinGetUserSetting } | Should -Throw
     }
 }
 
-Describe 'Test-WinGetUserSettings' {
+Describe 'Test-WinGetUserSetting' {
 
     It 'Bad json file' {
         Set-Content -Path $settingsFilePath -Value "Hi, im not a json. Thank you, Test."
 
         $inputSettings = @{ visual= @{ progressBar="retro"} }
-        Test-WinGetUserSettings -UserSettings $inputSettings | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings | Should -Be $false
     }
 
     It 'Equal' {
         $ogSettings = @{ visual= @{ progressBar="retro"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
         SetWinGetSettingsHelper $ogSettings
 
-        Test-WinGetUserSettings -UserSettings $ogSettings | Should -Be $true
+        Test-WinGetUserSetting -UserSettings $ogSettings | Should -Be $true
     }
 
     It 'Equal. Ignore schema' {
         Set-Content -Path $settingsFilePath -Value '{ "$schema": "https://aka.ms/winget-settings.schema.json", "visual": { "progressBar": "retro" } }'
 
         $inputSettings = @{ visual= @{ progressBar="retro"} }
-        Test-WinGetUserSettings -UserSettings $inputSettings | Should -Be $true
+        Test-WinGetUserSetting -UserSettings $inputSettings | Should -Be $true
     }
 
     It 'Not Equal string' {
@@ -475,7 +655,7 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="retro"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
-        Test-WinGetUserSettings -UserSettings $inputSettings | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings | Should -Be $false
     }
 
     It 'Not Equal bool' {
@@ -483,7 +663,7 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
-        Test-WinGetUserSettings -UserSettings $inputSettings | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings | Should -Be $false
     }
 
     It 'Not Equal. More settings' {
@@ -491,7 +671,7 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$false }}
-        Test-WinGetUserSettings -UserSettings $inputSettings | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings | Should -Be $false
     }
 
     It 'Not Equal. More settings input' {
@@ -499,14 +679,14 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
-        Test-WinGetUserSettings -UserSettings $inputSettings | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings | Should -Be $false
     }
 
     It 'Equal IgnoreNotSet' {
         $ogSettings = @{ visual= @{ progressBar="retro"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
         SetWinGetSettingsHelper $ogSettings
 
-        Test-WinGetUserSettings -UserSettings $ogSettings -IgnoreNotSet | Should -Be $true
+        Test-WinGetUserSetting -UserSettings $ogSettings -IgnoreNotSet | Should -Be $true
     }
 
     It 'Equal IgnoreNotSet. More settings' {
@@ -514,7 +694,7 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$false }}
-        Test-WinGetUserSettings -UserSettings $inputSettings -IgnoreNotSet | Should -Be $true
+        Test-WinGetUserSetting -UserSettings $inputSettings -IgnoreNotSet | Should -Be $true
     }
 
     It 'Not Equal IgnoreNotSet. More settings input' {
@@ -522,7 +702,7 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
-        Test-WinGetUserSettings -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
     }
 
     It 'Not Equal bool IgnoreNotSet' {
@@ -530,7 +710,7 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$false ; experimentalCmd=$true}}
-        Test-WinGetUserSettings -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
     }
 
     It 'Not Equal array IgnoreNotSet' {
@@ -538,7 +718,7 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ installBehavior= @{ preferences= @{ architectures = @("x86", "arm64")} }}
-        Test-WinGetUserSettings -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
     }
 
     It 'Not Equal wrong type IgnoreNotSet' {
@@ -546,22 +726,23 @@ Describe 'Test-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=4 ; experimentalCmd=$true}}
-        Test-WinGetUserSettings -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
+        Test-WinGetUserSetting -UserSettings $inputSettings -IgnoreNotSet | Should -Be $false
     }
+    
 
     AfterAll {
         SetWinGetSettingsHelper @{ debugging= @{ enableSelfInitiatedMinidump=$true ; keepAllLogFiles=$true } }
     }
 }
 
-Describe 'Set-WinGetUserSettings' {
+Describe 'Set-WinGetUserSetting' {
 
     It 'Overwrites' {
         $ogSettings = @{ source= @{ autoUpdateIntervalInMinutes=3}}
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$true ; experimentalCmd=$false}}
-        $result = Set-WinGetUserSettings -UserSettings $inputSettings
+        $result = Set-WinGetUserSetting -UserSettings $inputSettings
 
         $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $result.'$schema' | Should -Not -BeNullOrEmpty 
@@ -578,7 +759,7 @@ Describe 'Set-WinGetUserSettings' {
         SetWinGetSettingsHelper $ogSettings
 
         $inputSettings = @{ visual= @{ progressBar="rainbow"} ; experimentalFeatures= @{experimentalArg=$true ; experimentalCmd=$false}}
-        $result = Set-WinGetUserSettings -UserSettings $inputSettings -Merge
+        $result = Set-WinGetUserSetting -UserSettings $inputSettings -Merge
 
         $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $result.'$schema' | Should -Not -BeNullOrEmpty 
@@ -595,7 +776,7 @@ Describe 'Set-WinGetUserSettings' {
         Set-Content -Path $settingsFilePath -Value '{ "$schema": "https://aka.ms/winget-settings.schema.json", "visual": { "progressBar": "retro" } }'
 
         $inputSettings = @{ visual= @{ progressBar="retro"} }
-        $result = Set-WinGetUserSettings -UserSettings $inputSettings
+        $result = Set-WinGetUserSetting -UserSettings $inputSettings
 
         $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $result.'$schema' | Should -Not -BeNullOrEmpty 
@@ -606,7 +787,7 @@ Describe 'Set-WinGetUserSettings' {
         Set-Content -Path $settingsFilePath -Value "Hi, im not a json. Thank you, Test."
 
         $inputSettings = @{ visual= @{ progressBar="retro"} }
-        $result = Set-WinGetUserSettings -UserSettings $inputSettings
+        $result = Set-WinGetUserSetting -UserSettings $inputSettings
 
         $result | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $result.'$schema' | Should -Not -BeNullOrEmpty 
@@ -617,7 +798,7 @@ Describe 'Set-WinGetUserSettings' {
         Set-Content -Path $settingsFilePath -Value "Hi, im not a json. Thank you, Test."
 
         $inputSettings = @{ visual= @{ progressBar="retro"} }
-        { Set-WinGetUserSettings -UserSettings $inputSettings -Merge } | Should -Throw
+        { Set-WinGetUserSetting -UserSettings $inputSettings -Merge } | Should -Throw
     }
 
     AfterAll {
@@ -628,7 +809,7 @@ Describe 'Set-WinGetUserSettings' {
 Describe 'Get|Enable|Disable-WinGetSetting' {
 
     It 'Get-WinGetSetting' {
-        $settings = Get-WinGetSettings
+        $settings = Get-WinGetSetting
         $settings | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $settings.'$schema' | Should -Not -BeNullOrEmpty 
         $settings.adminSettings | Should -Not -BeNullOrEmpty
@@ -637,21 +818,21 @@ Describe 'Get|Enable|Disable-WinGetSetting' {
 
     # This tests require admin
     It 'Enable|Disable' {
-        $settings = Get-WinGetSettings
+        $settings = Get-WinGetSetting
         $settings | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $settings.adminSettings | Should -Not -BeNullOrEmpty
         $settings.adminSettings.LocalManifestFiles | Should -Be $false
 
         Enable-WinGetSetting -Name LocalManifestFiles
 
-        $afterEnable = Get-WinGetSettings
+        $afterEnable = Get-WinGetSetting
         $afterEnable | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $afterEnable.adminSettings | Should -Not -BeNullOrEmpty
         $afterEnable.adminSettings.LocalManifestFiles | Should -Be $true
 
         Disable-WingetSetting -Name LocalManifestFiles
 
-        $afterDisable = Get-WinGetSettings
+        $afterDisable = Get-WinGetSetting
         $afterDisable | Should -Not -BeNullOrEmpty -ErrorAction Stop
         $afterDisable.adminSettings | Should -Not -BeNullOrEmpty
         $afterDisable.adminSettings.LocalManifestFiles | Should -Be $false

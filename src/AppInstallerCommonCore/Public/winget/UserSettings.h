@@ -3,6 +3,7 @@
 #pragma once
 #include "AppInstallerStrings.h"
 #include "AppInstallerLogging.h"
+#include "winget/Archive.h"
 #include "winget/GroupPolicy.h"
 #include "winget/Resources.h"
 #include "winget/ManifestCommon.h"
@@ -42,6 +43,8 @@ namespace AppInstaller::Settings
         Retro,
         Accent,
         Rainbow,
+        Sixel,
+        Disabled,
     };
 
     // The download code to use for *installers*.
@@ -64,6 +67,7 @@ namespace AppInstaller::Settings
         // Visual
         ProgressBarVisualStyle,
         AnonymizePathForDisplay,
+        EnableSixelDisplay,
         // Source
         AutoUpdateTimeInMinutes,
         // Experimental
@@ -72,11 +76,9 @@ namespace AppInstaller::Settings
         EFDirectMSI,
         EFResume,
         EFConfiguration03,
-        EFSideBySide,
         EFConfigureSelfElevation,
-        EFStoreDownload,
-        EFIndexV2,
         EFConfigureExport,
+        EFFonts,
         // Telemetry
         TelemetryDisable,
         // Install behavior
@@ -90,6 +92,7 @@ namespace AppInstaller::Settings
         InstallerTypeRequirement,
         InstallDefaultRoot,
         InstallSkipDependencies,
+        ArchiveExtractionMethod,
         DisableInstallNotes,
         PortablePackageUserRoot,
         PortablePackageMachineRoot,
@@ -105,6 +108,8 @@ namespace AppInstaller::Settings
         UninstallPurgePortablePackage,
         // Download behavior
         DownloadDefaultDirectory,
+        // Configure behavior
+        ConfigureDefaultModuleRoot,
         // Interactivity
         InteractivityDisable,
 #ifndef AICLI_DISABLE_TEST_HOOKS
@@ -148,6 +153,7 @@ namespace AppInstaller::Settings
         // Visual
         SETTINGMAPPING_SPECIALIZATION(Setting::ProgressBarVisualStyle, std::string, VisualStyle, VisualStyle::Accent, ".visual.progressBar"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::AnonymizePathForDisplay, bool, bool, true, ".visual.anonymizeDisplayedPaths"sv);
+        SETTINGMAPPING_SPECIALIZATION(Setting::EnableSixelDisplay, bool, bool, false, ".visual.enableSixels"sv);
         // Source
         SETTINGMAPPING_SPECIALIZATION_POLICY(Setting::AutoUpdateTimeInMinutes, uint32_t, std::chrono::minutes, 15min, ".source.autoUpdateIntervalInMinutes"sv, ValuePolicy::SourceAutoUpdateIntervalInMinutes);
         // Experimental
@@ -156,11 +162,9 @@ namespace AppInstaller::Settings
         SETTINGMAPPING_SPECIALIZATION(Setting::EFDirectMSI, bool, bool, false, ".experimentalFeatures.directMSI"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::EFResume, bool, bool, false, ".experimentalFeatures.resume"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::EFConfiguration03, bool, bool, false, ".experimentalFeatures.configuration03"sv);
-        SETTINGMAPPING_SPECIALIZATION(Setting::EFSideBySide, bool, bool, false, ".experimentalFeatures.sideBySide"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::EFConfigureSelfElevation, bool, bool, false, ".experimentalFeatures.configureSelfElevate"sv);
-        SETTINGMAPPING_SPECIALIZATION(Setting::EFStoreDownload, bool, bool, false, ".experimentalFeatures.storeDownload"sv);
-        SETTINGMAPPING_SPECIALIZATION(Setting::EFIndexV2, bool, bool, false, ".experimentalFeatures.indexV2"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::EFConfigureExport, bool, bool, false, ".experimentalFeatures.configureExport"sv);
+        SETTINGMAPPING_SPECIALIZATION(Setting::EFFonts, bool, bool, false, ".experimentalFeatures.fonts"sv);
         // Telemetry
         SETTINGMAPPING_SPECIALIZATION(Setting::TelemetryDisable, bool, bool, false, ".telemetry.disable"sv);
         // Install behavior
@@ -173,6 +177,7 @@ namespace AppInstaller::Settings
         SETTINGMAPPING_SPECIALIZATION(Setting::InstallerTypePreference, std::vector<std::string>, std::vector<Manifest::InstallerTypeEnum>, {}, ".installBehavior.preferences.installerTypes"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::InstallerTypeRequirement, std::vector<std::string>, std::vector<Manifest::InstallerTypeEnum>, {}, ".installBehavior.requirements.installerTypes"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::InstallSkipDependencies, bool, bool, false, ".installBehavior.skipDependencies"sv);
+        SETTINGMAPPING_SPECIALIZATION(Setting::ArchiveExtractionMethod, std::string, Archive::ExtractionMethod, Archive::ExtractionMethod::ShellApi, ".installBehavior.archiveExtractionMethod"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::DisableInstallNotes, bool, bool, false, ".installBehavior.disableInstallNotes"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::PortablePackageUserRoot, std::string, std::filesystem::path, {}, ".installBehavior.portablePackageUserRoot"sv);
         SETTINGMAPPING_SPECIALIZATION(Setting::PortablePackageMachineRoot, std::string, std::filesystem::path, {}, ".installBehavior.portablePackageMachineRoot"sv);
@@ -182,6 +187,8 @@ namespace AppInstaller::Settings
         SETTINGMAPPING_SPECIALIZATION(Setting::UninstallPurgePortablePackage, bool, bool, false, ".uninstallBehavior.purgePortablePackage"sv);
         // Download behavior
         SETTINGMAPPING_SPECIALIZATION(Setting::DownloadDefaultDirectory, std::string, std::filesystem::path, {}, ".downloadBehavior.defaultDownloadDirectory"sv);
+        // Configure behavior
+        SETTINGMAPPING_SPECIALIZATION(Setting::ConfigureDefaultModuleRoot, std::string, std::filesystem::path, {}, ".configureBehavior.defaultModuleRoot"sv);
 
         // Network
         SETTINGMAPPING_SPECIALIZATION(Setting::NetworkDownloader, std::string, InstallerDownloader, InstallerDownloader::Default, ".network.downloader"sv);

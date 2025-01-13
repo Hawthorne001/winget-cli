@@ -5,13 +5,15 @@
 #include <ConfigurationParameter.h>
 
 #include <winget/Yaml.h>
+#include <optional>
+#include <utility>
 
 namespace winrt::Microsoft::Management::Configuration::implementation
 {
     // Parser for schema version 0.3
     struct ConfigurationSetParser_0_3 : public ConfigurationSetParser
     {
-        ConfigurationSetParser_0_3(AppInstaller::YAML::Node&& document) : m_document(std::move(document)) {}
+        ConfigurationSetParser_0_3() = default;
 
         virtual ~ConfigurationSetParser_0_3() noexcept = default;
 
@@ -27,6 +29,9 @@ namespace winrt::Microsoft::Management::Configuration::implementation
         hstring GetSchemaVersion() override;
 
     protected:
+        // Sets (or resets) the document to parse.
+        void SetDocument(AppInstaller::YAML::Node&& document) override;
+
         void ParseParameters(ConfigurationSetParser::ConfigurationSetPtr& set);
         void ParseParameter(ConfigurationParameter* parameter, const AppInstaller::YAML::Node& node);
         void ParseParameterType(ConfigurationParameter* parameter, const AppInstaller::YAML::Node& node);
@@ -54,4 +59,7 @@ namespace winrt::Microsoft::Management::Configuration::implementation
 
         AppInstaller::YAML::Node m_document;
     };
+
+    std::optional<std::pair<Windows::Foundation::PropertyType, bool>> ParseWindowsFoundationPropertyType(std::string_view value);
+    std::string_view ToString(Windows::Foundation::PropertyType value, bool isSecure);
 }

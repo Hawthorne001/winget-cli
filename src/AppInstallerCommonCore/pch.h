@@ -16,6 +16,8 @@
 #include <SoftPub.h>
 #include <WinTrust.h>
 #include <wincrypt.h>
+#include <deliveryoptimization.h>
+#include <deliveryoptimizationerrors.h>
 
 #include "TraceLogging.h"
 
@@ -86,6 +88,7 @@
 #include <winrt/Windows.ApplicationModel.AppExtensions.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.Management.Deployment.h>
 #include <winrt/Windows.Security.Cryptography.h>
 #include <winrt/Windows.Services.Store.h>

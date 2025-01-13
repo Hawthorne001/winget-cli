@@ -261,6 +261,11 @@ namespace
                 REQUIRE(defaultSwitches.at(InstallerSwitchType::Repair) == "/repair");
                 REQUIRE(manifest.DefaultInstallerInfo.RepairBehavior == RepairBehaviorEnum::Modify);
             }
+
+            if (manifestVer >= ManifestVer{ s_ManifestVersionV1_9 })
+            {
+                REQUIRE(manifest.DefaultInstallerInfo.ArchiveBinariesDependOnPath);
+            }
         }
 
         if (isSingleton || isExported)
@@ -375,6 +380,11 @@ namespace
             REQUIRE(installer1.RepairBehavior == RepairBehaviorEnum::Modify);
         }
 
+        if (manifestVer >= ManifestVer{ s_ManifestVersionV1_9 })
+        {
+            REQUIRE_FALSE(installer1.ArchiveBinariesDependOnPath);
+        }
+
         if (!isSingleton)
         {
             if (!isExported)
@@ -466,6 +476,12 @@ namespace
                     REQUIRE(installer5.ProductCode == "{Bar}");
                     REQUIRE(installer5.Switches.at(InstallerSwitchType::Repair) == "/repair");
                     REQUIRE(installer5.RepairBehavior == RepairBehaviorEnum::Modify);
+                }
+
+                if (manifestVer >= ManifestVer{ s_ManifestVersionV1_9 })
+                {
+                    ManifestInstaller installer4 = manifest.Installers.at(3);
+                    REQUIRE(installer4.ArchiveBinariesDependOnPath);
                 }
             }
 
@@ -1072,6 +1088,56 @@ TEST_CASE("ValidateV1_7GoodManifestAndVerifyContents", "[ManifestValidation]")
     VerifyV1ManifestContent(mergedManifest, false, ManifestVer{ s_ManifestVersionV1_7 });
 }
 
+TEST_CASE("ValidateV1_9GoodManifestAndVerifyContents", "[ManifestValidation]")
+{
+    ManifestValidateOption validateOption;
+    validateOption.FullValidation = true;
+    TempDirectory singletonDirectory{ "SingletonManifest" };
+    CopyTestDataFilesToFolder({ "ManifestV1_9-Singleton.yaml" }, singletonDirectory);
+    Manifest singletonManifest = YamlParser::CreateFromPath(singletonDirectory, validateOption);
+    VerifyV1ManifestContent(singletonManifest, true, ManifestVer{ s_ManifestVersionV1_9 });
+
+    TempDirectory multiFileDirectory{ "MultiFileManifest" };
+    CopyTestDataFilesToFolder({
+        "ManifestV1_9-MultiFile-Version.yaml",
+        "ManifestV1_9-MultiFile-Installer.yaml",
+        "ManifestV1_9-MultiFile-DefaultLocale.yaml",
+        "ManifestV1_9-MultiFile-Locale.yaml" }, multiFileDirectory);
+
+    TempFile mergedManifestFile{ "merged.yaml" };
+    Manifest multiFileManifest = YamlParser::CreateFromPath(multiFileDirectory, validateOption, mergedManifestFile);
+    VerifyV1ManifestContent(multiFileManifest, false, ManifestVer{ s_ManifestVersionV1_9 });
+
+    // Read from merged manifest should have the same content as multi file manifest
+    Manifest mergedManifest = YamlParser::CreateFromPath(mergedManifestFile);
+    VerifyV1ManifestContent(mergedManifest, false, ManifestVer{ s_ManifestVersionV1_9 });
+}
+
+TEST_CASE("ValidateV1_10GoodManifestAndVerifyContents", "[ManifestValidation]")
+{
+    ManifestValidateOption validateOption;
+    validateOption.FullValidation = true;
+    TempDirectory singletonDirectory{ "SingletonManifest" };
+    CopyTestDataFilesToFolder({ "ManifestV1_10-Singleton.yaml" }, singletonDirectory);
+    Manifest singletonManifest = YamlParser::CreateFromPath(singletonDirectory, validateOption);
+    VerifyV1ManifestContent(singletonManifest, true, ManifestVer{ s_ManifestVersionV1_10 });
+
+    TempDirectory multiFileDirectory{ "MultiFileManifest" };
+    CopyTestDataFilesToFolder({
+        "ManifestV1_10-MultiFile-Version.yaml",
+        "ManifestV1_10-MultiFile-Installer.yaml",
+        "ManifestV1_10-MultiFile-DefaultLocale.yaml",
+        "ManifestV1_10-MultiFile-Locale.yaml" }, multiFileDirectory);
+
+    TempFile mergedManifestFile{ "merged.yaml" };
+    Manifest multiFileManifest = YamlParser::CreateFromPath(multiFileDirectory, validateOption, mergedManifestFile);
+    VerifyV1ManifestContent(multiFileManifest, false, ManifestVer{ s_ManifestVersionV1_10 });
+
+    // Read from merged manifest should have the same content as multi file manifest
+    Manifest mergedManifest = YamlParser::CreateFromPath(mergedManifestFile);
+    VerifyV1ManifestContent(mergedManifest, false, ManifestVer{ s_ManifestVersionV1_10 });
+}
+
 TEST_CASE("WriteV1SingletonManifestAndVerifyContents", "[ManifestCreation]")
 {
     TempDirectory singletonDirectory{ "SingletonManifest" };
@@ -1287,6 +1353,137 @@ TEST_CASE("WriteV1_7SingletonManifestAndVerifyContents", "[ManifestCreation]")
     REQUIRE(std::filesystem::exists(generatedMultiFileManifestPath));
     Manifest generatedMultiFileManifest = YamlParser::CreateFromPath(exportedMultiFileDirectory);
     VerifyV1ManifestContent(generatedMultiFileManifest, false, ManifestVer{ s_ManifestVersionV1_7 }, true);
+}
+
+TEST_CASE("WriteV1_9SingletonManifestAndVerifyContents", "[ManifestCreation]")
+{
+    TempDirectory singletonDirectory{ "SingletonManifest" };
+    CopyTestDataFilesToFolder({ "ManifestV1_9-Singleton.yaml" }, singletonDirectory);
+    Manifest singletonManifest = YamlParser::CreateFromPath(singletonDirectory);
+
+    TempDirectory exportedSingletonDirectory{ "exportedSingleton" };
+    std::filesystem::path generatedSingletonManifestPath = exportedSingletonDirectory.GetPath() / "testSingletonManifest.yaml";
+    YamlWriter::OutputYamlFile(singletonManifest, singletonManifest.Installers[0], generatedSingletonManifestPath);
+
+    REQUIRE(std::filesystem::exists(generatedSingletonManifestPath));
+    Manifest generatedSingletonManifest = YamlParser::CreateFromPath(exportedSingletonDirectory);
+    VerifyV1ManifestContent(generatedSingletonManifest, true, ManifestVer{ s_ManifestVersionV1_9 }, true);
+
+    TempDirectory multiFileDirectory{ "MultiFileManifest" };
+    CopyTestDataFilesToFolder({
+        "ManifestV1_9-MultiFile-Version.yaml",
+        "ManifestV1_9-MultiFile-Installer.yaml",
+        "ManifestV1_9-MultiFile-DefaultLocale.yaml",
+        "ManifestV1_9-MultiFile-Locale.yaml" }, multiFileDirectory);
+
+    Manifest multiFileManifest = YamlParser::CreateFromPath(multiFileDirectory);
+    TempDirectory exportedMultiFileDirectory{ "exportedMultiFile" };
+    std::filesystem::path generatedMultiFileManifestPath = exportedMultiFileDirectory.GetPath() / "testMultiFileManifest.yaml";
+    YamlWriter::OutputYamlFile(multiFileManifest, multiFileManifest.Installers[0], generatedMultiFileManifestPath);
+
+    REQUIRE(std::filesystem::exists(generatedMultiFileManifestPath));
+    Manifest generatedMultiFileManifest = YamlParser::CreateFromPath(exportedMultiFileDirectory);
+    VerifyV1ManifestContent(generatedMultiFileManifest, false, ManifestVer{ s_ManifestVersionV1_9 }, true);
+}
+
+TEST_CASE("WriteV1_10SingletonManifestAndVerifyContents", "[ManifestCreation]")
+{
+    TempDirectory singletonDirectory{ "SingletonManifest" };
+    CopyTestDataFilesToFolder({ "ManifestV1_10-Singleton.yaml" }, singletonDirectory);
+    Manifest singletonManifest = YamlParser::CreateFromPath(singletonDirectory);
+
+    TempDirectory exportedSingletonDirectory{ "exportedSingleton" };
+    std::filesystem::path generatedSingletonManifestPath = exportedSingletonDirectory.GetPath() / "testSingletonManifest.yaml";
+    YamlWriter::OutputYamlFile(singletonManifest, singletonManifest.Installers[0], generatedSingletonManifestPath);
+
+    REQUIRE(std::filesystem::exists(generatedSingletonManifestPath));
+    Manifest generatedSingletonManifest = YamlParser::CreateFromPath(exportedSingletonDirectory);
+    VerifyV1ManifestContent(generatedSingletonManifest, true, ManifestVer{ s_ManifestVersionV1_10 }, true);
+
+    TempDirectory multiFileDirectory{ "MultiFileManifest" };
+    CopyTestDataFilesToFolder({
+        "ManifestV1_10-MultiFile-Version.yaml",
+        "ManifestV1_10-MultiFile-Installer.yaml",
+        "ManifestV1_10-MultiFile-DefaultLocale.yaml",
+        "ManifestV1_10-MultiFile-Locale.yaml" }, multiFileDirectory);
+
+    Manifest multiFileManifest = YamlParser::CreateFromPath(multiFileDirectory);
+    TempDirectory exportedMultiFileDirectory{ "exportedMultiFile" };
+    std::filesystem::path generatedMultiFileManifestPath = exportedMultiFileDirectory.GetPath() / "testMultiFileManifest.yaml";
+    YamlWriter::OutputYamlFile(multiFileManifest, multiFileManifest.Installers[0], generatedMultiFileManifestPath);
+
+    REQUIRE(std::filesystem::exists(generatedMultiFileManifestPath));
+    Manifest generatedMultiFileManifest = YamlParser::CreateFromPath(exportedMultiFileDirectory);
+    VerifyV1ManifestContent(generatedMultiFileManifest, false, ManifestVer{ s_ManifestVersionV1_10 }, true);
+}
+
+// Since Authentication is not supported in community repo and will cause manifest validation failure,
+// we are not adding Authentication in v1_10 manifests. Instead a separate test is created for Authentication.
+TEST_CASE("ReadWriteValidateV1_10ManifestWithInstallerAuthentication", "[ManifestValidation]")
+{
+    // Read manifest
+    TempDirectory testDirectory{ "TestManifest" };
+    CopyTestDataFilesToFolder({ "ManifestV1_10-InstallerAuthentication.yaml" }, testDirectory);
+    Manifest testManifest = YamlParser::CreateFromPath(testDirectory);
+
+    // Verify content
+    REQUIRE(testManifest.ManifestVersion == AppInstaller::Manifest::ManifestVer{ s_ManifestVersionV1_10 });
+    REQUIRE(testManifest.DefaultInstallerInfo.AuthInfo.Type == AppInstaller::Authentication::AuthenticationType::MicrosoftEntraId);
+    REQUIRE(testManifest.DefaultInstallerInfo.AuthInfo.MicrosoftEntraIdInfo);
+    REQUIRE(testManifest.DefaultInstallerInfo.AuthInfo.MicrosoftEntraIdInfo->Resource == "TestResource");
+    REQUIRE(testManifest.DefaultInstallerInfo.AuthInfo.MicrosoftEntraIdInfo->Scope == "TestScope");
+    REQUIRE(testManifest.Installers.size() == 1);
+    REQUIRE(testManifest.Installers[0].AuthInfo.Type == AppInstaller::Authentication::AuthenticationType::MicrosoftEntraIdForAzureBlobStorage);
+    REQUIRE(testManifest.Installers[0].AuthInfo.MicrosoftEntraIdInfo);
+    REQUIRE(testManifest.Installers[0].AuthInfo.MicrosoftEntraIdInfo->Resource == "https://storage.azure.com/");
+    REQUIRE(testManifest.Installers[0].AuthInfo.MicrosoftEntraIdInfo->Scope.empty());
+
+    // Manifest Validation. Only error is "Authentication not supported".
+    auto errors = ValidateManifest(testManifest, true);
+    REQUIRE(errors.size() == 1);
+    REQUIRE(errors[0].GetErrorMessage() == "Field is not supported.");
+    REQUIRE(errors[0].Context == "Authentication");
+
+    // Write manifest
+    TempDirectory exportedDirectory{ "ExportedManifest" };
+    std::filesystem::path exportedManifestPath = exportedDirectory.GetPath() / "ExportedManifest.yaml";
+    YamlWriter::OutputYamlFile(testManifest, testManifest.Installers[0], exportedManifestPath);
+
+    // Read back and validate content
+    REQUIRE(std::filesystem::exists(exportedManifestPath));
+    Manifest exportedManifest = YamlParser::CreateFromPath(exportedDirectory);
+    REQUIRE(testManifest.ManifestVersion == AppInstaller::Manifest::ManifestVer{ s_ManifestVersionV1_10 });
+    REQUIRE(exportedManifest.Installers.size() == 1);
+    REQUIRE(exportedManifest.Installers[0].AuthInfo.Type == AppInstaller::Authentication::AuthenticationType::MicrosoftEntraIdForAzureBlobStorage);
+    REQUIRE(exportedManifest.Installers[0].AuthInfo.MicrosoftEntraIdInfo);
+    REQUIRE(exportedManifest.Installers[0].AuthInfo.MicrosoftEntraIdInfo->Resource == "https://storage.azure.com/");
+    REQUIRE(exportedManifest.Installers[0].AuthInfo.MicrosoftEntraIdInfo->Scope.empty());
+}
+
+TEST_CASE("WriteManifestWithMultipleLocale", "[ManifestCreation]")
+{
+    Manifest multiLocaleManifest = YamlParser::CreateFromPath(TestDataFile("Manifest-Good-MultiLocale.yaml"));
+    TempDirectory exportedDirectory{ "exported" };
+    std::filesystem::path generatedManifestPath = exportedDirectory.GetPath() / "testManifestWithMultipleLocale.yaml";
+    YamlWriter::OutputYamlFile(multiLocaleManifest, multiLocaleManifest.Installers[0], generatedManifestPath);
+
+    REQUIRE(std::filesystem::exists(generatedManifestPath));
+    Manifest generatedManifest = YamlParser::CreateFromPath(generatedManifestPath);
+    REQUIRE(generatedManifest.Localizations.size() == 2);
+}
+
+TEST_CASE("WriteManifestWithMSStoreInstaller", "[ManifestCreation]")
+{
+    Manifest msstoreManifest = YamlParser::CreateFromPath(TestDataFile("DownloadFlowTest_MSStore.yaml"));
+    TempDirectory exportedDirectory{ "exported" };
+    std::filesystem::path generatedManifestPath = exportedDirectory.GetPath() / "testManifestWithMultipleLocale.yaml";
+    msstoreManifest.ManifestVersion = ManifestVer{ "1.1.0" };
+    YamlWriter::OutputYamlFile(msstoreManifest, msstoreManifest.Installers[0], generatedManifestPath);
+
+    REQUIRE(std::filesystem::exists(generatedManifestPath));
+    Manifest generatedManifest = YamlParser::CreateFromPath(generatedManifestPath);
+    REQUIRE(generatedManifest.Installers[0].BaseInstallerType == InstallerTypeEnum::MSStore);
+    REQUIRE(!generatedManifest.Installers[0].ProductId.empty());
 }
 
 YamlManifestInfo CreateYamlManifestInfo(std::string testDataFile)

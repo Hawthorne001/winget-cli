@@ -140,9 +140,12 @@ ms.localizationpriority: medium
 | 0x8A15007E | -1978335106 | APPINSTALLER_CLI_ERROR_SQLITE_CONNECTION_TERMINATED | The SQLite connection was terminated to prevent corruption. |
 | 0x8A15007F | -1978335105 | APPINSTALLER_CLI_ERROR_DISPLAYCATALOG_API_FAILED | Failed to get Microsoft Store package catalog. |
 | 0x8A150080 | -1978335104 | APPINSTALLER_CLI_ERROR_NO_APPLICABLE_DISPLAYCATALOG_PACKAGE | No applicable Microsoft Store package found from Microsoft Store package catalog. |
-| 0x8A150081 | -1978335103 | APPINSTALLER_CLI_ERROR_SFSCLIENT_API_FAILED | Failed to get Microsoft Store package download infomation. |
-| 0x8A150082 | -1978335102 | APPINSTALLER_CLI_ERROR_NO_APPLICABLE_SFSCLIENT_PACKAGE | No applicable Microsoft Store package download infomation found. |
+| 0x8A150081 | -1978335103 | APPINSTALLER_CLI_ERROR_SFSCLIENT_API_FAILED | Failed to get Microsoft Store package download information. |
+| 0x8A150082 | -1978335102 | APPINSTALLER_CLI_ERROR_NO_APPLICABLE_SFSCLIENT_PACKAGE | No applicable Microsoft Store package download information found. |
 | 0x8A150083 | -1978335101 | APPINSTALLER_CLI_ERROR_LICENSING_API_FAILED | Failed to retrieve Microsoft Store package license. |
+| 0x8A150084 | -1978335100 | APPINSTALLER_CLI_ERROR_SFSCLIENT_PACKAGE_NOT_SUPPORTED | The Microsoft Store package does not support download command. |
+| 0x8A150085 | -1978335099 | APPINSTALLER_CLI_ERROR_LICENSING_API_FAILED_FORBIDDEN | Failed to retrieve Microsoft Store package license. The Microsoft Entra Id account does not have required privilege. |
+| 0x8A150086 | -1978335098 | APPINSTALLER_CLI_ERROR_INSTALLER_ZERO_BYTE_FILE | Downloaded zero byte installer; ensure that your network connection is working properly. |
 
 ## Install errors.
 
@@ -157,8 +160,7 @@ ms.localizationpriority: medium
 | 0x8A150107 | -1978334969 | APPINSTALLER_CLI_ERROR_INSTALL_NO_NETWORK | This application requires internet connectivity. Connect to a network then try again. |
 | 0x8A150108 | -1978334968 | APPINSTALLER_CLI_ERROR_INSTALL_CONTACT_SUPPORT | This application encountered an error during installation. Contact support. |
 | 0x8A150109 | -1978334967 | APPINSTALLER_CLI_ERROR_INSTALL_REBOOT_REQUIRED_TO_FINISH | Restart your PC to finish installation. |
-| 0x8A15010A | -1978334966 | APPINSTALLER_CLI_ERROR_INSTALL_REBOOT_REQUIRED_TO_INSTALL |
-Installation failed. Restart your PC then try again. |
+| 0x8A15010A | -1978334966 | APPINSTALLER_CLI_ERROR_INSTALL_REBOOT_REQUIRED_TO_INSTALL | Installation failed. Restart your PC then try again. |
 | 0x8A15010B | -1978334965 | APPINSTALLER_CLI_ERROR_INSTALL_REBOOT_INITIATED | Your PC will restart to finish installation. |
 | 0x8A15010C | -1978334964 | APPINSTALLER_CLI_ERROR_INSTALL_CANCELLED_BY_USER | You cancelled the installation. |
 | 0x8A15010D | -1978334963 | APPINSTALLER_CLI_ERROR_INSTALL_ALREADY_INSTALLED | Another version of this application is already installed. |
@@ -169,6 +171,7 @@ Installation failed. Restart your PC then try again. |
 | 0x8A150112 | -1978334958 | APPINSTALLER_CLI_ERROR_INSTALL_INVALID_PARAMETER | Invalid parameter. |
 | 0x8A150113 | -1978334957 | APPINSTALLER_CLI_ERROR_INSTALL_SYSTEM_NOT_SUPPORTED | Package not supported by the system. |
 | 0x8A150114 | -1978334956 | APPINSTALLER_CLI_ERROR_INSTALL_UPGRADE_NOT_SUPPORTED | The installer does not support upgrading an existing package. |
+| 0x8A150115 | -1978334955 | APPINSTALLER_CLI_ERROR_INSTALL_CUSTOM_ERROR | Installation failed with installer custom error. |
 
 ## Check for package installed status
 
@@ -203,6 +206,8 @@ Installation failed. Restart your PC then try again. |
 | 0x8A15C00F | -1978286065 | WINGET_CONFIG_ERROR_TEST_FAILED | Some of the configuration units failed while testing their state. |
 | 0x8A15C010 | -1978286064 | WINGET_CONFIG_ERROR_TEST_NOT_RUN | Configuration state was not tested. |
 | 0x8A15C011 | -1978286063 | WINGET_CONFIG_ERROR_GET_FAILED | The configuration unit failed getting its properties. |
+| 0x8A15C012 | -1978286062 | WINGET_CONFIG_ERROR_HISTORY_ITEM_NOT_FOUND | The specified configuration could not be found. |
+| 0x8A15C013 | -1978286061 | WINGET_CONFIG_ERROR_PARAMETER_INTEGRITY_BOUNDARY | Parameter cannot be passed across integrity boundary. |
 
 ## Configuration Processor Errors
 

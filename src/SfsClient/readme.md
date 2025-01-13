@@ -1,10 +1,15 @@
 ## SfsClient
 
-Do not change code under the sfs-client directory; it contains sfs-client source code from commit [cf18b35](https://github.com/microsoft/sfs-client/commits/cf18b35).  
-It is created using git subtree command:
+Do not change code under the sfs-client directory; it contains sfs-client source code from release 1.1.0 (https://github.com/microsoft/sfs-client/releases/tag/1.1.0).  
+It was initially created using git subtree command:
 ```
-    git subtree add --prefix=src/SfsClient/sfs-client https://github.com/microsoft/sfs-client.git cf18b357f43aa9bbaba7d8b3b3774b39140aa00f --squash
+    git subtree add --prefix=src/SfsClient/sfs-client https://github.com/microsoft/sfs-client.git be733af9e5c8e9227f2018ff618800bf08a31180 --squash
 ```
+Then updated to release 1.1.0 using:
+```
+    git subtree pull -P src/SfsClient/sfs-client https://github.com/microsoft/sfs-client 1.1.0 --squash
+```
+
 
 ### Update
 To update, run the following command, then update the above commit for reference.  'master' can be replaced with the appropriate commit spec as desired.

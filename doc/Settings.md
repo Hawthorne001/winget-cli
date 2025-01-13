@@ -23,7 +23,7 @@ The `source` settings involve configuration to the WinGet source.
 A positive integer represents the update interval in minutes. The check for updates only happens when a source is used. A zero will disable the check for updates to a source. Any other values are invalid.
 
 - Disable: 0
-- Default: 5
+- Default: 15
 
 To manually update the source use `winget source update`
 
@@ -33,11 +33,15 @@ The `visual` settings involve visual elements that are displayed by WinGet
 
 ### progressBar
 
-Color of the progress bar that WinGet displays when not specified by arguments.
+Style of the progress spinner and bar that WinGet displays when not specified by arguments. In addition, all options except `disabled` send [Virtual Terminal progress](https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC) updates that any supporting terminal may display visually.
 
-- accent (default)
-- retro
-- rainbow
+|Value|Description|Release|
+|---|---|---|
+|`accent` (default)|Use the [Windows Accent color](https://support.microsoft.com/en-us/windows/change-colors-in-windows-d26ef4d6-819a-581c-1581-493cfcc005fe)|1.0|
+|`retro`|Use the current foreground terminal color|1.0|
+|`rainbow`|Progress through a rainbow of colors|1.0|
+|`sixel`|Use sixel images; requires a terminal that supports displaying sixels, such as [Windows Terminal](https://github.com/microsoft/terminal/releases) 1.22.2362 or later|1.9|
+|`disabled`|No progress will be displayed|1.9|
 
 ```json
     "visual": {
@@ -52,6 +56,16 @@ Replaces some known folder paths with their respective environment variable. Def
 ```json
     "visual": {
         "anonymizeDisplayedPaths": true
+    },
+```
+
+### enableSixels
+
+Enables output of sixel images in certain contexts. Defaults to false.
+
+```json
+    "visual": {
+        "enableSixels": true
     },
 ```
 
@@ -99,11 +113,25 @@ The 'skipDependencies' behavior affects whether dependencies are installed for a
     },
 ```
 
+### Archive Extraction Method
+The 'archiveExtractionMethod' behavior affects how installer archives are extracted. Currently there are two supported values: `Tar` or `ShellApi`.
+`Tar` indicates that the archive should be extracted using the tar executable ('tar.exe') while `shellApi` indicates using the Windows Shell API. Defaults to `shellApi` if value is not set or is invalid.
+
+```json
+    "installBehavior": {
+        "archiveExtractionMethod": "tar" | "shellApi"
+    },
+```
+
 ### Preferences and Requirements
 
 Some of the settings are duplicated under `preferences` and `requirements`. `preferences` affect how the various available options are sorted when choosing the one to act on.  For instance, the default scope of package installs is for the current user, but if that is not an option then a machine level installer will be chosen. `requirements` filter the options, potentially resulting in an empty list and a failure to install. In the previous example, a user scope requirement would result in no applicable installers and an error.
 
 Any arguments passed on the command line will effectively override the matching `requirement` setting for the duration of that command.
+
+> [!NOTE]
+> - These settings are only applied for the `winget install` command.
+> - Other commands like `winget configure` are not affected by these settings.
 
 ### Scope
 
@@ -173,6 +201,21 @@ The `purgePortablePackage` behavior affects the default behavior for uninstallin
 ```json
     "uninstallBehavior": {
         "purgePortablePackage": true
+    },
+```
+
+## Configure Behavior
+
+The `configureBehavior` settings affect the default behavior of applying a configuration.
+
+### Default Module Root
+The `defaultModuleRoot` behavior affects the default root directory where modules are installed to. Defaults to `%LOCALAPPDATA%/Microsoft/WinGet/Configuration/Modules` if value is not set or is invalid.
+
+> Note: This setting value must be an absolute path.
+
+```json
+    "configureBehavior": {
+        "defaultModuleRoot": "C:/Program Files/Modules/"
     },
 ```
 
@@ -302,17 +345,6 @@ You can enable the feature as shown below.
    },
 ```
 
-### sideBySide
-
-This feature enables experimental improvements for supporting multiple instances of a package being installed on a system.
-You can enable the feature as shown below.
-
-```json
-   "experimentalFeatures": {
-       "sideBySide": true
-   },
-```
-
 ### configureSelfElevate
 
 This feature enables configure commands to request elevation as needed.
@@ -324,17 +356,6 @@ Currently, this means that properly attributed configuration units (and only tho
    },
 ```
 
-### storeDownload
-
-This feature enables packages to be downloaded from the Microsoft Store.
-You can enable the feature as shown below.
-
-```json
-   "experimentalFeatures": {
-       "storeDownload": true
-   },
-```
-
 ### configureExport
 
 This feature enables exporting a configuration file.
@@ -343,22 +364,5 @@ You can enable the feature as shown below.
 ```json
    "experimentalFeatures": {
        "configureExport": true
-   },
-```
-
-### indexV2
-
-This feature enables the `winget` source to retrieve the V2 index, which is significantly smaller.
-Regardless of the state of this feature, if the index on the machine contains a V2 index, it will be used.
-If there is a bug with the V2 index stopping the `winget` CLI from working, disable the feature in your settings file and run this command:
-```
-> winget uninstall -s msstore Microsoft.Winget.Source_8wekyb3d8bbwe
-```
-
-You can enable the feature as shown below.
-
-```json
-   "experimentalFeatures": {
-       "indexV2": true
    },
 ```

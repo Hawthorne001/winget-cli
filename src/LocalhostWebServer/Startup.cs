@@ -29,6 +29,8 @@ namespace LocalhostWebServer
 
         public static string TestDataPath { get; set; }
 
+        public static bool ExitBeforeRun { get; set; }
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -61,13 +63,14 @@ namespace LocalhostWebServer
             provider.Mappings[".appxbundle"] = "application/vns.ms-appx";
             provider.Mappings[".mszyml"] = "application/x-ms-zip-yaml";
 
-
             //Enable static file serving
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(StaticFileRoot),
                 RequestPath = StaticFileRequestPath,
                 ContentTypeProvider = provider,
+                ServeUnknownFileTypes = true,
+                DefaultContentType = "application/octet-stream"
             });
 
             app.UseDirectoryBrowser(new DirectoryBrowserOptions

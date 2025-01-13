@@ -28,6 +28,7 @@ namespace Microsoft.Management.Configuration.UnitTests.Tests
     /// Unit tests for configuration processor tests.
     /// </summary>
     [Collection("UnitTestCollection")]
+    [InProc]
     public class ConfigurationSetProcessorTests
     {
         private readonly UnitTestFixture fixture;
@@ -79,7 +80,7 @@ namespace Microsoft.Management.Configuration.UnitTests.Tests
         }
 
         /// <summary>
-        /// Test CreateUnitProcessor case insensitive.
+        /// Test CreateUnitProcessor case-insensitive.
         /// </summary>
         [Fact]
         public void CreateUnitProcessor_CaseInsensitive()
@@ -113,7 +114,7 @@ namespace Microsoft.Management.Configuration.UnitTests.Tests
         }
 
         /// <summary>
-        /// Test CreateUnitProcessor case insensitive.
+        /// Test CreateUnitProcessor case-insensitive.
         /// </summary>
         [Fact]
         public void CreateUnitProcessor_ResourceNameMismatch()

@@ -26,13 +26,20 @@
           "enum": [
             "accent",
             "rainbow",
-            "retro"
+            "retro",
+            "sixel",
+            "disabled"
           ]
         },
         "anonymizeDisplayedPaths": {
           "description": "Replaces some known folder paths with their respective environment variable",
           "type": "boolean",
           "default": true
+        },
+        "enableSixels": {
+          "description": "Enables output of sixel images in certain contexts",
+          "type": "boolean",
+          "default": false
         }
       }
     },
@@ -191,6 +198,18 @@
         }
       }
     },
+    "ConfigureBehavior": {
+      "description": "Configure settings",
+      "type": "object",
+      "properties": {
+        "defaultModuleRoot": {
+          "description": "The default root directory where PowerShell modules are installed to when applying a configuration.",
+          "type": "string",
+          "maxLength": 32767,
+          "default": "%LOCALAPPDATA%/Microsoft/WinGet/Configuration/Modules/"
+        }
+      }
+    },
     "DownloadBehavior": {
       "description": "Download settings",
       "type": "object",
@@ -271,18 +290,8 @@
           "type": "boolean",
           "default": false
         },
-        "sideBySide": {
-          "description": "Enable support for improved side-by-side handling",
-          "type": "boolean",
-          "default": false
-        },
         "configureSelfElevate": {
           "description": "Enable configure commands request elevation as needed",
-          "type": "boolean",
-          "default": false
-        },
-        "storeDownload": {
-          "description": "Enable support for downloading packages from the Microsoft Store",
           "type": "boolean",
           "default": false
         },
@@ -291,8 +300,8 @@
           "type": "boolean",
           "default": false
         },
-        "indexV2": {
-          "description": "Enable retrieving the V2 index for the winget source",
+        "fonts": {
+          "description": "Enable support for managing fonts",
           "type": "boolean",
           "default": false
         }
@@ -300,6 +309,12 @@
     }
   },
   "allOf": [
+    {
+      "properties": {
+        "source": { "$ref": "#/definitions/Source" }
+      },
+      "additionalItems": true
+    },
     {
       "properties": {
         "visual": { "$ref": "#/definitions/Visual" }
@@ -314,13 +329,31 @@
     },
     {
       "properties": {
-        "source": { "$ref": "#/definitions/Source" }
+        "installPrefReq": { "$ref": "#/definitions/InstallPrefReq" }
       },
       "additionalItems": true
     },
     {
       "properties": {
         "installBehavior": { "$ref": "#/definitions/InstallBehavior" }
+      },
+      "additionalItems": true
+    },
+    {
+      "properties": {
+        "uninstallBehavior": { "$ref": "#/definitions/UninstallBehavior" }
+      },
+      "additionalItems": true
+    },
+    {
+      "properties": {
+        "configureBehavior": { "$ref": "#/definitions/ConfigureBehavior" }
+      },
+      "additionalItems": true
+    },
+    {
+      "properties": {
+        "downloadBehavior": { "$ref": "#/definitions/DownloadBehavior" }
       },
       "additionalItems": true
     },

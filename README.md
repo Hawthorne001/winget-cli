@@ -1,4 +1,3 @@
-
 # ![WinGet Icon](.github/images/WindowsPackageManager_Assets/ICO/PNG/_40.png) Windows Package Manager
 
 ## WinGet Client
@@ -13,11 +12,11 @@ If you are new to the Windows Package Manager, you might want to [Explore the Wi
 ## Installing The Client
 
 > [!NOTE]
-> The client requires Windows 10 1809 (build 17763) or later at this time. Windows Server 2019 is not supported as the Microsoft Store is not available nor are updated dependencies. It may be possible to install on Windows Server 2022, this should be considered experimental (not supported), and requires dependencies to be manually installed as well.
+> The client requires Windows 10 1809 (build 17763) or later at this time. Windows Server 2019 is not supported as the Microsoft Store is not available nor are updated dependencies. It may be possible to install on Windows Server 2022, this should be considered experimental (not supported) and requires dependencies to be manually installed as well.
 
 ### Microsoft Store [Recommended]
 
-The client is distributed within the [App Installer](https://www.microsoft.com/p/app-installer/9nblggh4nns1) package.
+The client is distributed within the [App Installer](https://apps.microsoft.com/detail/9nblggh4nns1) package.
 
 ### Development Releases
 
@@ -45,11 +44,11 @@ Please read our [troubleshooting guide](/doc/troubleshooting/README.md).
 
 ## Administrator Considerations
 
-Installer behavior can be different depending on whether you are running **winget** with administrator privileges.
+Installer behavior can be different depending on whether you are running **WinGet** with administrator privileges.
 
-* When running **winget** without administrator privileges, some applications may [require elevation](https://docs.microsoft.com/windows/security/identity-protection/user-account-control/how-user-account-control-works) to install. When the installer runs, Windows will prompt you to [elevate](https://docs.microsoft.com/windows/security/identity-protection/user-account-control/how-user-account-control-works#the-uac-user-experience). If you choose not to elevate, the application will fail to install.
+* When running **WinGet** without administrator privileges, some applications may [require elevation](https://docs.microsoft.com/windows/security/identity-protection/user-account-control/how-user-account-control-works) to install. When the installer runs, Windows will prompt you to [elevate](https://docs.microsoft.com/windows/security/identity-protection/user-account-control/how-user-account-control-works#the-uac-user-experience). If you choose not to elevate, the application will fail to install.
 
-* When running **winget** in an Administrator Command Prompt, you will not see [elevation prompts](https://docs.microsoft.com/windows/security/identity-protection/user-account-control/how-user-account-control-works#the-uac-user-experience) if the application requires it. Always use caution when running your command prompt as an administrator, and only install applications you trust.
+* When running **WinGet** in an Administrator Command Prompt, you will not see [elevation prompts](https://docs.microsoft.com/windows/security/identity-protection/user-account-control/how-user-account-control-works#the-uac-user-experience) if the application requires it. Always use caution when running your command prompt as an administrator, and only install applications you trust.
 
 ### Build your own
 
@@ -57,11 +56,11 @@ You can also [build the client yourself](#building-the-client). While the client
 
 ## Build Status
 
-[![Build Status](https://dev.azure.com/ms/winget-cli/_apis/build/status/microsoft.winget-cli?branchName=master)](https://dev.azure.com/ms/winget-cli/_build/latest?definitionId=344&branchName=master)
+[![Build Status](https://dev.azure.com/shine-oss/winget-cli/_apis/build/status/winget-cli%20Build_Test?branchName=master&label=Main%20Branch%20(Including%20PRs))](https://dev.azure.com/shine-oss/winget-cli/_build/latest?definitionId=10&branchName=master)
 
 ## Windows Package Manager Release Roadmap
 
-The plan for delivering next Windows Package Manager releases is described included in our [discussions](https://github.com/microsoft/winget-cli/discussions/2063), and will be updated as the project proceeds.
+The plan for delivering the next Windows Package Manager release is described and included in our [discussions](https://github.com/microsoft/winget-cli/discussions/2063), and will be updated as the project proceeds.
 
 ## Overview of the  Windows Package Manager
 
@@ -77,26 +76,26 @@ This winget-cli repository includes the source code designed to build the client
 
 ### Sources
 
-The client is built around the concept of sources; a set of packages effectively. Sources provide the ability to discover and retrieve the metadata about the packages, so that the client can act on it.
+The client is built around the concept of sources; a set of packages effectively. Sources provide the ability to discover and retrieve the metadata about the packages so that the client can act on it.
 
 * The default "winget" source includes packages in the [Windows Package Manager Community Repository](https://github.com/microsoft/winget-pkgs).
 * The default "msstore" source includes packages in the Microsoft Store.
-* It is also possible to host your own private [REST based](https://github.com/microsoft/winget-cli-restsource) source.
+* It is also possible to host your own private [REST-based](https://github.com/microsoft/winget-cli-restsource) source.
 
 ## Building the client
 
 1. Clone the repository
 2. Configure your system, please use the [configuration file](.configurations/configuration.dsc.yaml). This can be applied by either:
    * [Dev Home](https://github.com/microsoft/devhome)'s machine configuration tool
-   * WinGet configuration. Run `winget configure .configurations/configuration.dsc.yaml` from the project root so relative paths resolve correctly
-3. Run `vcpkg integrate install` from Developer Command Prompt for VS 2022. This is one time setup step until configuration file in step 2 is updated to work with vcpkg setup.
+   * WinGet configuration. Run `winget configure .configurations/configuration.dsc.yaml` from the project root so relative paths resolve correctly.
+3. Run `vcpkg integrate install` from the Developer Command Prompt for VS 2022. This is a one-time setup step until the configuration file in step 2 is updated to work with vcpkg setup.
 
 ### Prerequisites
 
 * Windows 10 1809 (17763) or later
 * [Developer Mode enabled](https://docs.microsoft.com/windows/uwp/get-started/enable-your-device-for-development)
 * [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
-  * Or use winget to install it ;) (although you may need to adjust the workloads via Tools->Get Tools and Features...)
+  * Or use WinGet to install it ;) (although you may need to adjust the workloads via Tools->Get Tools and Features...)
 * The following workloads:
   * .NET Desktop Development
   * Desktop Development with C++
@@ -110,17 +109,16 @@ The client is built around the concept of sources; a set of packages effectively
 
 ### Building
 
-Open `winget-cli\src\AppInstallerCLI.sln` in Visual Studio and build. We currently only build using the solution; command line methods of building a VS solution should work as well. After the build finishes, deploy the solution from Build > Deploy Solution. You can then run the client from the command line using `wingetdev`.
+Open `winget-cli\src\AppInstallerCLI.sln` in Visual Studio and build. We currently only build using the solution; command-line methods of building a VS solution should work as well. After the build finishes, deploy the solution from Build > Deploy Solution. You can then run the client from the command line using `wingetdev`.
 
 ## Credit
 
-We would like to thank [Keivan Beigi (@kayone)](https://github.com/kayone) for his work on AppGet which helped us on the initial project direction for Windows Package Manager.
+We would like to thank [Keivan Beigi (@kayone)](https://github.com/kayone) for his work on AppGet which helped us with the initial project direction for Windows Package Manager.
 
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com. More
+Contributor License Agreement (CLA) declaring that you have the right to, and do, actually grant us the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com. More
 information is available in our [CONTRIBUTING.md](/CONTRIBUTING.md) file.
 
 When you submit a pull request, a CLA bot will automatically determine whether you need to provide
@@ -137,11 +135,11 @@ The winget.exe client is instrumented to collect usage and diagnostic (error) da
 
 If you build the client yourself the instrumentation will not be enabled and no data will be sent to Microsoft.
 
-The winget.exe client respects machine wide privacy settings and users can opt-out on their device, as documented in the Microsoft Windows privacy statement [here](https://support.microsoft.com/help/4468236/diagnostics-feedback-and-privacy-in-windows-10-microsoft-privacy). In addition, you may also explicitly block telemetry using [settings](https://docs.microsoft.com/windows/package-manager/winget/settings)
+The winget.exe client respects machine-wide privacy settings and users can opt out on their device, as documented in the [Microsoft Windows privacy statement](https://support.microsoft.com/help/4468236/diagnostics-feedback-and-privacy-in-windows-10-microsoft-privacy). In addition, you may also explicitly block telemetry using [settings](https://docs.microsoft.com/windows/package-manager/winget/settings)
 
-In short to opt-out, do one of the following:
+In short, to opt out, do one of the following:
 
-**Windows 11**: Go to `Start`, then select `Settings` > `Privacy & security` > `Diagnostics & feedback` > `Diagnostic data` and unselect `Send optional diagnostic data`.
+**Windows 11**: Go to `Start`, then select `Settings` > `Privacy & Security` > `Diagnostics & feedback` > `Diagnostic data` and unselect `Send optional diagnostic data`.
 
 **Windows 10**: Go to `Start`, then select `Settings` > `Privacy` > `Diagnostics & feedback`, and select `Required diagnostic data`.
 

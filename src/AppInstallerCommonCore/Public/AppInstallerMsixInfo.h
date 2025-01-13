@@ -47,8 +47,14 @@ namespace AppInstaller::Msix
     // Gets the package location from the given full name.
     std::optional<std::filesystem::path> GetPackageLocationFromFullName(std::string_view fullName);
 
-    // Gets the package version from the given full name.
-    AppInstaller::Utility::UInt64Version GetPackageVersionFromFullName(std::string_view fullName);
+    struct PackageIdInfo
+    {
+        std::string Name;
+        AppInstaller::Utility::UInt64Version Version;
+    };
+
+    // Gets the package id info from the given full name.
+    PackageIdInfo GetPackageIdInfoFromFullName(std::string_view fullName);
 
     // MsixInfo class handles all appx/msix related query.
     struct MsixInfo
@@ -73,8 +79,11 @@ namespace AppInstaller::Msix
         // If skipP7xFileId is true, returns content of converted .p7s
         std::vector<byte> GetSignature(bool skipP7xFileId = false);
 
-        // Get the signature sha256 hash.
+        // Gets the signature sha256 hash.
         Utility::SHA256::HashBuffer GetSignatureHash();
+
+        // Gets the digest of the package.
+        std::wstring GetDigest();
 
         // Gets the package full name.
         std::wstring GetPackageFullNameWide();

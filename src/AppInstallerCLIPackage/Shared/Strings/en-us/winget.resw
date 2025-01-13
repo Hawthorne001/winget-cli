@@ -1284,6 +1284,9 @@ Do you agree to the terms?</value>
   <data name="InstallFlowReturnCodeSystemNotSupported" xml:space="preserve">
     <value>The current system configuration does not support the installation of this package.</value>
   </data>
+  <data name="InstallFlowReturnCodeCustomError" xml:space="preserve">
+    <value>Installation failed with a custom installer error. Contact package support.</value>
+  </data>
   <data name="InstallAbandoned" xml:space="preserve">
     <value>Installation abandoned</value>
   </data>
@@ -1808,6 +1811,9 @@ Please specify one of them using the --source option to proceed.</value>
   </data>
   <data name="ConfigurationSuccessfullyApplied" xml:space="preserve">
     <value>Configuration successfully applied.</value>
+  </data>
+  <data name="ConfigurationUnitSuccessfullyApplied" xml:space="preserve">
+    <value>Unit successfully applied.</value>
   </data>
   <data name="ConfigurationWaitingOnAnother" xml:space="preserve">
     <value>Another configuration is being applied to the system. This configuration will continue as soon as is possible...</value>
@@ -2521,6 +2527,9 @@ Please specify one of them using the --source option to proceed.</value>
   <data name="APPINSTALLER_CLI_ERROR_INSTALL_UPGRADE_NOT_SUPPORTED" xml:space="preserve">
     <value>The installer does not support upgrading an existing package.</value>
   </data>
+  <data name="APPINSTALLER_CLI_ERROR_INSTALL_CUSTOM_ERROR" xml:space="preserve">
+    <value>Installation failed with a custom installer error.</value>
+  </data>
   <data name="WINGET_INSTALLED_STATUS_ARP_ENTRY_NOT_FOUND" xml:space="preserve">
     <value>The Apps and Features Entry for the package could not be found.</value>
   </data>
@@ -2753,7 +2762,7 @@ Please specify one of them using the --source option to proceed.</value>
     <value>Specify the account to be used for authentication</value>
   </data>
   <data name="SourceAddFailedAuthenticationNotSupported" xml:space="preserve">
-    <value>Failed to add source. This winget version does not support the source's authentication method. Try upgrade to latest winget version.</value>
+    <value>Failed to add source. This winget version does not support the source's authentication method. Try upgrading to latest winget version.</value>
     <comment>{Locked="winget"}</comment>
   </data>
   <data name="SourceRequiresAuthentication" xml:space="preserve">
@@ -2874,7 +2883,7 @@ Please specify one of them using the --source option to proceed.</value>
   <data name="SettingsSetCommandShortDescription" xml:space="preserve">
     <value>Sets the value of an admin setting.</value>
   </data>
-  <data name="SourceRequireExplicitArgumentDescription" xml:space="preserve">
+  <data name="SourceExplicitArgumentDescription" xml:space="preserve">
     <value>Excludes a source from discovery unless specified</value>
   </data>
   <data name="SourceListExplicit" xml:space="preserve">
@@ -2896,13 +2905,13 @@ Please specify one of them using the --source option to proceed.</value>
     <value>Failed to get Microsoft Store package download information.</value>
   </data>
   <data name="APPINSTALLER_CLI_ERROR_NO_APPLICABLE_SFSCLIENT_PACKAGE" xml:space="preserve">
-    <value>No applicable Microsoft Store package download information found.</value>
+    <value>No applicable Microsoft Store package found for download.</value>
   </data>
   <data name="APPINSTALLER_CLI_ERROR_LICENSING_API_FAILED" xml:space="preserve">
     <value>Failed to retrieve Microsoft Store package license.</value>
   </data>
-  <data name="MSStoreDownloadPackageNotFound" xml:space="preserve">
-    <value>The Microsoft Store package could not be found.</value>
+  <data name="MSStoreDownloadNoApplicablePackageFound" xml:space="preserve">
+    <value>No applicable Microsoft Store package found.</value>
   </data>
   <data name="MSStoreDownloadPackageHashVerified" xml:space="preserve">
     <value>Successfully verified Microsoft Store package hash</value>
@@ -2948,7 +2957,8 @@ Please specify one of them using the --source option to proceed.</value>
     <comment>{Locked="--rename"}</comment>
   </data>
   <data name="MSStoreDownloadAuthenticationNotice" xml:space="preserve">
-    <value>Microsoft Store package download requires Microsoft Entra Id authentication. Authentication prompt may appear when necessary. Authenticated information will be shared with Microsoft services for access authorization. For Microsoft Store package licensing, the Microsoft Entra Id account needs to have administrator access to the Microsoft Entra Id tenant.</value>
+    <value>Microsoft Store package download requires Microsoft Entra Id authentication. Authentication prompt may appear when necessary. Authenticated information will be shared with Microsoft services for access authorization. For Microsoft Store package licensing, the Microsoft Entra Id account needs to be a member of Global Administrator, User Administrator, or License Administrator.</value>
+    <comment>{Locked="Global Administrator,User Administrator,License Administrator"}</comment>
   </data>
   <data name="SkipMicrosoftStorePackageLicenseArgumentDescription" xml:space="preserve">
     <value>Skips retrieving Microsoft Store package offline license</value>
@@ -3006,5 +3016,185 @@ Please specify one of them using the --source option to proceed.</value>
   <data name="ConfigurationWarningValueTruncated" xml:space="preserve">
     <value>&lt;this value has been truncated; inspect the file contents for the complete text&gt;</value>
     <comment>Keep some form of separator like the "&lt;&gt;" around the text so that it stands out from the preceding text.</comment>
+  </data>
+  <data name="ConfigureListCommandLongDescription" xml:space="preserve">
+    <value>Shows the high level details for configurations that have been applied to the system. This data can then be used with `configure` commands to get more details.</value>
+    <comment>{Locked="`configure`"}</comment>
+  </data>
+  <data name="ConfigureListCommandShortDescription" xml:space="preserve">
+    <value>Shows configuration history</value>
+  </data>
+  <data name="ConfigurationHistoryEmpty" xml:space="preserve">
+    <value>There are no configurations in the history.</value>
+  </data>
+  <data name="ConfigurationHistoryItemArgumentDescription" xml:space="preserve">
+    <value>Select items from history</value>
+  </data>
+  <data name="ConfigurationHistoryItemNotFound" xml:space="preserve">
+    <value>No single configuration could be found that matched the provided data. Provide either the full name or part of the identifier that unambiguously matches the desired configuration.</value>
+  </data>
+  <data name="ConfigurationHistoryRemoveArgumentDescription" xml:space="preserve">
+    <value>Remove the item from history</value>
+  </data>
+  <data name="ConfigureListFirstApplied" xml:space="preserve">
+    <value>First Applied</value>
+    <comment>Column header for date values indicating when a configuration was first applied to the system.</comment>
+  </data>
+  <data name="ConfigureListIdentifier" xml:space="preserve">
+    <value>Identifier</value>
+  </data>
+  <data name="ConfigureListName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ConfigureListOrigin" xml:space="preserve">
+    <value>Origin</value>
+  </data>
+  <data name="ConfigureListPath" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="WINGET_CONFIG_ERROR_HISTORY_ITEM_NOT_FOUND" xml:space="preserve">
+    <value>The specified configuration could not be found.</value>
+  </data>
+  <data name="ConfigurationSetStateCompleted" xml:space="preserve">
+    <value>Completed</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationSetStateInProgress" xml:space="preserve">
+    <value>In progress</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationSetStatePending" xml:space="preserve">
+    <value>Pending</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationSetStateUnknown" xml:space="preserve">
+    <value>Unknown</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationStatusWatchArgumentDescription" xml:space="preserve">
+    <value>Monitor configuration status.</value>
+    <comment>As in "to monitor the status of a configuration being applied".</comment>
+  </data>
+  <data name="ConfigurationUnitStateCompleted" xml:space="preserve">
+    <value>Completed</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationUnitStateInProgress" xml:space="preserve">
+    <value>In progress</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationUnitStatePending" xml:space="preserve">
+    <value>Pending</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationUnitStateSkipped" xml:space="preserve">
+    <value>Skipped</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigurationUnitStateUnknown" xml:space="preserve">
+    <value>Unknown</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigureListApplyBegun" xml:space="preserve">
+    <value>Apply Started</value>
+    <comment>When the configuration application started.</comment>
+  </data>
+  <data name="ConfigureListApplyEnded" xml:space="preserve">
+    <value>Apply Ended</value>
+    <comment>When the configuration application ended.</comment>
+  </data>
+  <data name="ConfigureListResult" xml:space="preserve">
+    <value>Result</value>
+  </data>
+  <data name="ConfigureListResultDescription" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="ConfigureListState" xml:space="preserve">
+    <value>State</value>
+    <comment>The state of processing an item.</comment>
+  </data>
+  <data name="ConfigureListUnit" xml:space="preserve">
+    <value>Unit</value>
+  </data>
+  <data name="StoreInstall_PackageNotAvailableForCurrentSystem" xml:space="preserve">
+    <value>The package is not compatible with the current Windows version or platform.</value>
+  </data>
+  <data name="ConfigurationSuppressPrologueArgumentDescription" xml:space="preserve">
+    <value>Suppress showing initial configuration details when possible</value>
+  </data>
+  <data name="MSStoreDownloadMultiplePackagesNotice" xml:space="preserve">
+    <value>Multiple Microsoft Store packages may be downloaded targeting different platforms and architectures. --platform, --architecture can be used to filter the packages.</value>
+    <comment>{Locked="--platform--architecture"}</comment>
+  </data>
+  <data name="MSStoreDownloadGetLicenseForbidden" xml:space="preserve">
+    <value>Failed to retrieve Microsoft Store package license. The Microsoft Entra Id account is not a member of Global Administrator, User Administrator, or License Administrator. Use --skip-license to skip retrieving Microsoft Store package license.</value>
+    <comment>{Locked="Global Administrator,User Administrator,License Administrator,--skip-license"}</comment>
+  </data>
+  <data name="MSStoreDownloadPackageDownloadNotSupported" xml:space="preserve">
+    <value>The Microsoft Store package does not support download.</value>
+  </data>
+  <data name="APPINSTALLER_CLI_ERROR_SFSCLIENT_PACKAGE_NOT_SUPPORTED" xml:space="preserve">
+    <value>The Microsoft Store package does not support download.</value>
+  </data>
+  <data name="APPINSTALLER_CLI_ERROR_LICENSING_API_FAILED_FORBIDDEN" xml:space="preserve">
+    <value>Failed to retrieve Microsoft Store package license. The Microsoft Entra Id account does not have required privilege.</value>
+  </data>
+  <data name="WINGET_CONFIG_ERROR_PARAMETER_INTEGRITY_BOUNDARY" xml:space="preserve">
+    <value>Parameter cannot be passed across integrity boundary.</value>
+  </data>
+  <data name="APPINSTALLER_CLI_ERROR_INSTALLER_ZERO_BYTE_FILE" xml:space="preserve">
+    <value>Downloaded zero byte installer; ensure that your network connection is working properly.</value>
+  </data>
+  <data name="InstallerZeroByteFile" xml:space="preserve">
+    <value>Downloaded zero byte installer; ensure that your network connection is working properly.</value>
+  </data>
+  <data name="FontCommandShortDescription" xml:space="preserve">
+    <value>Manage fonts</value>
+  </data>
+  <data name="FontCommandLongDescription" xml:space="preserve">
+    <value>Manage fonts with sub-commands. Fonts can be installed, upgraded, or uninstalled similar to packages. </value>
+  </data>
+  <data name="FontFamily" xml:space="preserve">
+    <value>Family</value>
+  </data>
+  <data name="FontFaces" xml:space="preserve">
+    <value>Faces</value>
+    <comment>"Faces" represents the typeface of the font family such as 'Bold' or 'Italic'</comment>
+  </data>
+  <data name="FontFamilyNameArgumentDescription" xml:space="preserve">
+    <value>Filter results by family name</value>
+  </data>
+  <data name="FontFace" xml:space="preserve">
+    <value>Face</value>
+    <comment>"Face" represents the typeface of a font family such as 'Bold' or 'Italic'</comment>
+  </data>
+  <data name="FontFilePaths" xml:space="preserve">
+    <value>Paths</value>
+  </data>
+  <data name="NoInstalledFontFound" xml:space="preserve">
+    <value>No installed font found matching input criteria.</value>
+  </data>
+  <data name="FontListCommandShortDescription" xml:space="preserve">
+    <value>List installed fonts</value>
+  </data>
+  <data name="FontListCommandLongDescription" xml:space="preserve">
+    <value>List all installed fonts, or full details of a specific font.</value>
+  </data>
+  <data name="FontVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ConfigurationModules" xml:space="preserve">
+    <value>Configuration Modules</value>
+    <comment>PowerShell Modules that are used for the Configuration feature</comment>
+  </data>
+  <data name="InstallerDownloadRequiresAuthentication" xml:space="preserve">
+    <value>The package installer requires authentication. Authentication prompt may appear when necessary. Authenticated information will be shared with the installer download url.</value>
+  </data>
+  <data name="InstallerDownloadAuthenticationNotSupported" xml:space="preserve">
+    <value>Failed to download installer. This winget version does not support the installer download authentication method. Try upgrading to latest winget version.</value>
+    <comment>{Locked="winget"}</comment>
+  </data>
+  <data name="InstallerDownloadAuthenticationFailed" xml:space="preserve">
+    <value>Failed to download installer. Authentication failed.</value>
   </data>
 </root>

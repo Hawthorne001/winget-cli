@@ -3,9 +3,11 @@
 #include "pch.h"
 #include "ConfigurationFlow.h"
 #include "PromptFlow.h"
+#include "TableOutput.h"
 #include "Public/ConfigurationSetProcessorFactoryRemoting.h"
 #include "ConfigurationCommon.h"
 #include "ConfigurationWingetDscModuleUnitValidation.h"
+#include <AppInstallerDateTime.h>
 #include <AppInstallerDownloader.h>
 #include <AppInstallerErrors.h>
 #include <AppInstallerRuntime.h>
@@ -100,19 +102,39 @@ namespace AppInstaller::CLI::Workflow
             IConfigurationSetProcessorFactory factory;
 
             // Since downgrading is not currently supported, only use dynamic if not running as admin.
-            if (Settings::ExperimentalFeature::IsEnabled(Settings::ExperimentalFeature::Feature::ConfigureSelfElevation) &&
-                !Runtime::IsRunningAsAdmin())
+            if (Settings::ExperimentalFeature::IsEnabled(Settings::ExperimentalFeature::Feature::ConfigureSelfElevation) && !Runtime::IsRunningAsAdmin())
             {
                 factory = ConfigurationRemoting::CreateDynamicRuntimeFactory();
-                // TODO: Implement SetProcessorFactory::IPwshConfigurationSetProcessorFactoryProperties on dynamic factory
             }
             else
             {
                 factory = ConfigurationRemoting::CreateOutOfProcessFactory();
-                Configuration::SetModulePath(context, factory);
             }
 
+            Configuration::SetModulePath(context, factory);
             return factory;
+        }
+
+        void ConfigureProcessorForUse(Execution::Context& context, ConfigurationProcessor&& processor)
+        {
+            // Set the processor to the current level of the logging.
+            processor.MinimumLevel(anon::ConvertLevel(Logging::Log().GetLevel()));
+            processor.Caller(L"winget");
+            // Use same activity as the overall winget command
+            processor.ActivityIdentifier(*Logging::Telemetry().GetActivityId());
+            // Apply winget telemetry setting to configuration
+            processor.GenerateTelemetryEvents(!Settings::User().Get<Settings::Setting::TelemetryDisable>());
+
+            // Route the configuration diagnostics into the context's diagnostics logging
+            processor.Diagnostics([&context](const winrt::Windows::Foundation::IInspectable&, const IDiagnosticInformation& diagnostics)
+                {
+                    context.GetThreadGlobals().GetDiagnosticLogger().Write(Logging::Channel::Config, anon::ConvertLevel(diagnostics.Level()), Utility::ConvertToUTF8(diagnostics.Message()));
+                });
+
+            ConfigurationContext configurationContext;
+            configurationContext.Processor(std::move(processor));
+
+            context.Add<Data::ConfigurationContext>(std::move(configurationContext));
         }
 
         winrt::hstring GetValueSetString(const ValueSet& valueSet, std::wstring_view value)
@@ -768,7 +790,7 @@ namespace AppInstaller::CLI::Workflow
                     EndProgress();
                     if (SUCCEEDED(resultInformation.ResultCode()))
                     {
-                        m_context.Reporter.Info() << "  "_liv << Resource::String::ConfigurationSuccessfullyApplied << std::endl;
+                        m_context.Reporter.Info() << "  "_liv << Resource::String::ConfigurationUnitSuccessfullyApplied << std::endl;
                     }
                     else
                     {
@@ -1096,7 +1118,7 @@ namespace AppInstaller::CLI::Workflow
             return getResult;
         }
 
-        std::optional<ConfigurationUnit> CreateConfigurationUnit(Execution::Context& context, const std::optional<ConfigurationUnit> dependantUnit)
+        std::optional<ConfigurationUnit> CreateConfigurationUnit(Execution::Context& context, const std::optional<ConfigurationUnit> dependentUnit)
         {
             if (context.Args.Contains(Execution::Args::Type::ConfigurationExportModule, Execution::Args::Type::ConfigurationExportResource))
             {
@@ -1113,9 +1135,9 @@ namespace AppInstaller::CLI::Workflow
                 directives.Insert(s_Directive_Module, PropertyValue::CreateString(moduleNameWide));
 
                 Utility::LocIndString description;
-                if (dependantUnit.has_value())
+                if (dependentUnit.has_value())
                 {
-                    description = Resource::String::ConfigureExportUnitDescription(Utility::LocIndView{ Utility::ConvertToUTF8(dependantUnit.value().Identifier()) });
+                    description = Resource::String::ConfigureExportUnitDescription(Utility::LocIndView{ Utility::ConvertToUTF8(dependentUnit.value().Identifier()) });
                 }
                 else
                 {
@@ -1163,10 +1185,10 @@ namespace AppInstaller::CLI::Workflow
                 unit.Intent(ConfigurationUnitIntent::Apply);
 
                 // Add dependency if needed.
-                if (dependantUnit.has_value())
+                if (dependentUnit.has_value())
                 {
                     auto dependencies = winrt::single_threaded_vector<winrt::hstring>();
-                    dependencies.Append(dependantUnit.value().Identifier());
+                    dependencies.Append(dependentUnit.value().Identifier());
                     unit.Dependencies(std::move(dependencies));
                 }
 
@@ -1175,6 +1197,105 @@ namespace AppInstaller::CLI::Workflow
 
             return {};
         }
+
+        bool HistorySetMatchesInput(const ConfigurationSet& set, const std::string& foldedInput)
+        {
+            if (foldedInput.empty())
+            {
+                return false;
+            }
+
+            if (Utility::FoldCase(Utility::NormalizedString{ set.Name() }) == foldedInput)
+            {
+                return true;
+            }
+
+            std::ostringstream identifierStream;
+            identifierStream << set.InstanceIdentifier();
+            std::string identifier = identifierStream.str();
+            THROW_HR_IF(E_UNEXPECTED, identifier.empty());
+
+            std::size_t startPosition = 0;
+            if (identifier[0] == '{' && foldedInput[0] != '{')
+            {
+                startPosition = 1;
+            }
+
+            std::string_view identifierView = identifier;
+            identifierView = identifierView.substr(startPosition);
+
+            return Utility::CaseInsensitiveStartsWith(identifierView, foldedInput);
+        }
+
+        Resource::LocString ToLocString(ConfigurationSetState state)
+        {
+            switch (state)
+            {
+            case ConfigurationSetState::Pending:
+                return Resource::String::ConfigurationSetStatePending;
+            case ConfigurationSetState::InProgress:
+                return Resource::String::ConfigurationSetStateInProgress;
+            case ConfigurationSetState::Completed:
+                return Resource::String::ConfigurationSetStateCompleted;
+            case ConfigurationSetState::Unknown:
+            default:
+                return Resource::String::ConfigurationSetStateUnknown;
+            }
+        }
+
+        Resource::LocString ToLocString(ConfigurationUnitState state)
+        {
+            switch (state)
+            {
+            case ConfigurationUnitState::Pending:
+                return Resource::String::ConfigurationUnitStatePending;
+            case ConfigurationUnitState::InProgress:
+                return Resource::String::ConfigurationUnitStateInProgress;
+            case ConfigurationUnitState::Completed:
+                return Resource::String::ConfigurationUnitStateCompleted;
+            case ConfigurationUnitState::Skipped:
+                return Resource::String::ConfigurationUnitStateSkipped;
+            case ConfigurationUnitState::Unknown:
+            default:
+                return Resource::String::ConfigurationUnitStateUnknown;
+            }
+        }
+
+        std::string_view ToString(ConfigurationChangeEventType type)
+        {
+            switch (type)
+            {
+            case ConfigurationChangeEventType::SetAdded:
+                return "SetAdded";
+            case ConfigurationChangeEventType::SetStateChanged:
+                return "SetStateChanged";
+            case ConfigurationChangeEventType::SetRemoved:
+                return "SetRemoved";
+            case ConfigurationChangeEventType::Unknown:
+            default:
+                return "Unknown";
+            }
+        }
+
+        std::string_view ToString(ConfigurationUnitResultSource source)
+        {
+            switch (source)
+            {
+            case ConfigurationUnitResultSource::Internal:
+                return "Internal";
+            case ConfigurationUnitResultSource::ConfigurationSet:
+                return "ConfigurationSet";
+            case ConfigurationUnitResultSource::UnitProcessing:
+                return "UnitProcessing";
+            case ConfigurationUnitResultSource::SystemState:
+                return "SystemState";
+            case ConfigurationUnitResultSource::Precondition:
+                return "Precondition";
+            case ConfigurationUnitResultSource::None:
+            default:
+                return "None";
+            }
+        }
     }
 
     void CreateConfigurationProcessor(Context& context)
@@ -1182,32 +1303,29 @@ namespace AppInstaller::CLI::Workflow
         auto progressScope = context.Reporter.BeginAsyncProgress(true);
         progressScope->Callback().SetProgressMessage(Resource::String::ConfigurationInitializing());
 
-        ConfigurationProcessor processor{ anon::CreateConfigurationSetProcessorFactory(context)};
+        anon::ConfigureProcessorForUse(context, ConfigurationProcessor{ anon::CreateConfigurationSetProcessorFactory(context) });
+    }
 
-        // Set the processor to the current level of the logging.
-        processor.MinimumLevel(anon::ConvertLevel(Logging::Log().GetLevel()));
-        processor.Caller(L"winget");
-        // Use same activity as the overall winget command
-        processor.ActivityIdentifier(*Logging::Telemetry().GetActivityId());
-        // Apply winget telemetry setting to configuration
-        processor.GenerateTelemetryEvents(!Settings::User().Get<Settings::Setting::TelemetryDisable>());
-
-        // Route the configuration diagnostics into the context's diagnostics logging
-        processor.Diagnostics([&context](const winrt::Windows::Foundation::IInspectable&, const IDiagnosticInformation& diagnostics)
-            {
-                context.GetThreadGlobals().GetDiagnosticLogger().Write(Logging::Channel::Config, anon::ConvertLevel(diagnostics.Level()), Utility::ConvertToUTF8(diagnostics.Message()));
-            });
-
-        ConfigurationContext configurationContext;
-        configurationContext.Processor(std::move(processor));
-
-        context.Add<Data::ConfigurationContext>(std::move(configurationContext));
+    void CreateConfigurationProcessorWithoutFactory(Execution::Context& context)
+    {
+        anon::ConfigureProcessorForUse(context, ConfigurationProcessor{ IConfigurationSetProcessorFactory{ nullptr } });
     }
 
     void OpenConfigurationSet(Context& context)
     {
-        std::string argPath{ context.Args.GetArg(Args::Type::ConfigurationFile) };
-        anon::OpenConfigurationSet(context, argPath, true);
+        if (context.Args.Contains(Args::Type::ConfigurationFile))
+        {
+            std::string argPath{ context.Args.GetArg(Args::Type::ConfigurationFile) };
+            anon::OpenConfigurationSet(context, argPath, true);
+        }
+        else
+        {
+            THROW_HR_IF(E_UNEXPECTED, !context.Args.Contains(Args::Type::ConfigurationHistoryItem));
+
+            context <<
+                GetConfigurationSetHistory <<
+                SelectSetFromHistory;
+        }
     }
 
     void CreateOrOpenConfigurationSet(Context& context)
@@ -1250,27 +1368,31 @@ namespace AppInstaller::CLI::Workflow
         auto getDetailsOperation = configContext.Processor().GetSetDetailsAsync(configContext.Set(), ConfigurationUnitDetailFlags::ReadOnly);
         auto unification = anon::CreateProgressCancellationUnification(std::move(progressScope), getDetailsOperation);
 
+        bool suppressDetailsOutput = context.Args.Contains(Args::Type::ConfigurationAcceptWarning) && context.Args.Contains(Args::Type::ConfigurationSuppressPrologue);
         anon::OutputHelper outputHelper{ context };
         uint32_t unitsShown = 0;
 
-        getDetailsOperation.Progress([&](const IAsyncOperationWithProgress<GetConfigurationSetDetailsResult, GetConfigurationUnitDetailsResult>& operation, const GetConfigurationUnitDetailsResult&)
-            {
-                auto threadContext = context.SetForCurrentThread();
-
-                unification.Reset();
-
-                auto unitResults = operation.GetResults().UnitResults();
-                for (unitsShown; unitsShown < unitResults.Size(); ++unitsShown)
+        if (!suppressDetailsOutput)
+        {
+            getDetailsOperation.Progress([&](const IAsyncOperationWithProgress<GetConfigurationSetDetailsResult, GetConfigurationUnitDetailsResult>& operation, const GetConfigurationUnitDetailsResult&)
                 {
-                    GetConfigurationUnitDetailsResult unitResult = unitResults.GetAt(unitsShown);
-                    anon::LogFailedGetConfigurationUnitDetails(unitResult.Unit(), unitResult.ResultInformation());
-                    outputHelper.OutputConfigurationUnitInformation(unitResult.Unit());
-                }
+                    auto threadContext = context.SetForCurrentThread();
 
-                progressScope = context.Reporter.BeginAsyncProgress(true);
-                progressScope->Callback().SetProgressMessage(gettingDetailString);
-                unification.Progress(std::move(progressScope));
-            });
+                    unification.Reset();
+
+                    auto unitResults = operation.GetResults().UnitResults();
+                    for (unitsShown; unitsShown < unitResults.Size(); ++unitsShown)
+                    {
+                        GetConfigurationUnitDetailsResult unitResult = unitResults.GetAt(unitsShown);
+                        anon::LogFailedGetConfigurationUnitDetails(unitResult.Unit(), unitResult.ResultInformation());
+                        outputHelper.OutputConfigurationUnitInformation(unitResult.Unit());
+                    }
+
+                    progressScope = context.Reporter.BeginAsyncProgress(true);
+                    progressScope->Callback().SetProgressMessage(gettingDetailString);
+                    unification.Progress(std::move(progressScope));
+                });
+        }
 
         HRESULT hr = S_OK;
         GetConfigurationSetDetailsResult result = nullptr;
@@ -1300,7 +1422,7 @@ namespace AppInstaller::CLI::Workflow
         }
 
         // Handle any missing progress callbacks that are in the results
-        if (result)
+        if (result && !suppressDetailsOutput)
         {
             auto unitResults = result.UnitResults();
             if (unitResults)
@@ -1315,11 +1437,14 @@ namespace AppInstaller::CLI::Workflow
         }
 
         // Handle any units that are NOT in the results (due to an exception part of the way through)
-        auto allUnits = configContext.Set().Units();
-        for (unitsShown; unitsShown < allUnits.Size(); ++unitsShown)
+        if (!suppressDetailsOutput)
         {
-            ConfigurationUnit unit = allUnits.GetAt(unitsShown);
-            outputHelper.OutputConfigurationUnitInformation(unit);
+            auto allUnits = configContext.Set().Units();
+            for (unitsShown; unitsShown < allUnits.Size(); ++unitsShown)
+            {
+                ConfigurationUnit unit = allUnits.GetAt(unitsShown);
+                outputHelper.OutputConfigurationUnitInformation(unit);
+            }
         }
 
         if (outputHelper.ValuesTruncated)
@@ -1753,6 +1878,313 @@ namespace AppInstaller::CLI::Workflow
         {
             context.Reporter.Error() << Resource::String::ConfigurationExportFailed << std::endl;
             throw;
+        }
+    }
+
+    void GetConfigurationSetHistory(Execution::Context& context)
+    {
+        auto progressScope = context.Reporter.BeginAsyncProgress(true);
+
+        ConfigurationContext& configContext = context.Get<Data::ConfigurationContext>();
+        configContext.History(configContext.Processor().GetConfigurationHistory());
+    }
+
+    void ShowConfigurationSetHistory(Execution::Context& context)
+    {
+        const auto& history = context.Get<Data::ConfigurationContext>().History();
+
+        if (history.empty())
+        {
+            context.Reporter.Info() << Resource::String::ConfigurationHistoryEmpty << std::endl;
+        }
+        else
+        {
+            TableOutput<4> historyTable{ context.Reporter, { Resource::String::ConfigureListIdentifier, Resource::String::ConfigureListName, Resource::String::ConfigureListState, Resource::String::ConfigureListOrigin } };
+
+            for (const auto& set : history)
+            {
+                winrt::hstring origin = set.Path();
+                if (origin.empty())
+                {
+                    origin = set.Origin();
+                }
+
+                historyTable.OutputLine({ Utility::ConvertGuidToString(set.InstanceIdentifier()), Utility::ConvertToUTF8(set.Name()), anon::ToLocString(set.State()), Utility::ConvertToUTF8(origin)});
+            }
+
+            historyTable.Complete();
+        }
+    }
+
+    void SelectSetFromHistory(Execution::Context& context)
+    {
+        ConfigurationContext& configContext = context.Get<Data::ConfigurationContext>();
+        ConfigurationSet selectedSet{ nullptr };
+
+        std::string foldedInput = Utility::FoldCase(context.Args.GetArg(Execution::Args::Type::ConfigurationHistoryItem));
+
+        for (const ConfigurationSet& historySet : configContext.History())
+        {
+            if (anon::HistorySetMatchesInput(historySet, foldedInput))
+            {
+                if (selectedSet)
+                {
+                    selectedSet = nullptr;
+                    break;
+                }
+                else
+                {
+                    selectedSet = historySet;
+                }
+            }
+        }
+
+        if (!selectedSet)
+        {
+            context.Reporter.Warn() << Resource::String::ConfigurationHistoryItemNotFound << std::endl;
+            context << ShowConfigurationSetHistory;
+            AICLI_TERMINATE_CONTEXT(WINGET_CONFIG_ERROR_HISTORY_ITEM_NOT_FOUND);
+        }
+
+        configContext.Set(std::move(selectedSet));
+    }
+
+    void RemoveConfigurationSetHistory(Execution::Context& context)
+    {
+        auto progressScope = context.Reporter.BeginAsyncProgress(true);
+        context.Get<Data::ConfigurationContext>().Set().Remove();
+    }
+
+    void SerializeConfigurationSetHistory(Execution::Context& context)
+    {
+        auto progressScope = context.Reporter.BeginAsyncProgress(true);
+        std::filesystem::path absolutePath = std::filesystem::weakly_canonical(std::filesystem::path{ Utility::ConvertToUTF16(context.Args.GetArg(Execution::Args::Type::OutputFile)) });
+        auto openAction = Streams::FileRandomAccessStream::OpenAsync(absolutePath.wstring(), FileAccessMode::ReadWrite, StorageOpenOptions::None, Streams::FileOpenDisposition::CreateAlways);
+        auto cancellationScope = progressScope->Callback().SetCancellationFunction([&]() { openAction.Cancel(); });
+        auto outputStream = openAction.get();
+
+        context.Get<Data::ConfigurationContext>().Set().Serialize(outputStream);
+    }
+
+    void ShowSingleConfigurationSetHistory(Execution::Context& context)
+    {
+        const auto& set = context.Get<Data::ConfigurationContext>().Set();
+
+        // Output a table with name/value pairs for some of the set's properties. Example:
+        // 
+        // Field         Value
+        // ----------------------------------------------------
+        // Identifier    {7D5CF50E-F3C6-4333-BFE6-5A806F9EBA4E}
+        // Name          Test Name
+        // Origin        Test Origin
+        // Path          Test Path
+        // State         Completed
+        // First Applied 2024-07-16 21:15:13.000
+        // Apply Begun   2024-07-16 21:15:13.000
+        // Apply Ended   2024-07-16 21:15:13.000
+        Execution::TableOutput<2> table(context.Reporter, { Resource::String::SourceListField, Resource::String::SourceListValue });
+
+        table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListIdentifier }, Utility::ConvertGuidToString(set.InstanceIdentifier()) });
+        table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListName }, Utility::ConvertToUTF8(set.Name()) });
+        table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListOrigin }, Utility::ConvertToUTF8(set.Origin()) });
+        table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListPath }, Utility::ConvertToUTF8(set.Path()) });
+        table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListState }, anon::ToLocString(set.State()) });
+        table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListFirstApplied }, Utility::TimePointToString(winrt::clock::to_sys(set.FirstApply())) });
+
+        auto applyBegun = set.ApplyBegun();
+        if (applyBegun != winrt::clock::time_point{})
+        {
+            table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListApplyBegun }, Utility::TimePointToString(winrt::clock::to_sys(applyBegun)) });
+        }
+
+        auto applyEnded = set.ApplyEnded();
+        if (applyEnded != winrt::clock::time_point{})
+        {
+            table.OutputLine({ Resource::LocString{ Resource::String::ConfigureListApplyEnded }, Utility::TimePointToString(winrt::clock::to_sys(applyEnded)) });
+        }
+
+        table.Complete();
+
+        context.Reporter.Info() << std::endl;
+
+        // Output a table with unit state information. Groups are represented by indentation beneath their parent unit. Example:
+        //
+        // Unit                        State     Result     Details
+        // ------------------------------------------------------------
+        // Module/Resource [Name]      Completed 0x00000000
+        // Module2/Resource [Group]    Completed 0x00000000
+        // |-Module3/Resource [Child1] Completed 0x00000000
+        // |---Module4/Resource2       Completed 0x80004005 I failed :(
+        // |-Module3/Resource [Child2] Completed 0x00000000
+        Execution::TableOutput<4> unitTable(context.Reporter, { Resource::String::ConfigureListUnit, Resource::String::ConfigureListState, Resource::String::ConfigureListResult, Resource::String::ConfigureListResultDescription });
+
+        struct UnitSiblings
+        {
+            size_t Depth = 0;
+            size_t Current = 0;
+            std::vector<ConfigurationUnit> Siblings;
+        };
+
+        std::vector<UnitSiblings> stack;
+
+        {
+            UnitSiblings initial;
+            auto units = set.Units();
+            initial.Siblings.resize(units.Size());
+            units.GetMany(0, initial.Siblings);
+            stack.emplace_back(std::move(initial));
+        }
+
+        // Each item on the stack is a list of sibling units.
+        // Each iteration, we process the Current sibling from the group on top of the stack.
+        // If it is a group, we add its children as a new stack item to be processed next.
+        while (!stack.empty())
+        {
+            UnitSiblings& currentSiblings = stack.back();
+
+            if (currentSiblings.Current >= currentSiblings.Siblings.size())
+            {
+                stack.pop_back();
+                continue;
+            }
+
+            ConfigurationUnit& currentUnit = currentSiblings.Siblings[currentSiblings.Current++];
+
+            std::ostringstream unitStream;
+
+            if (currentSiblings.Depth)
+            {
+                unitStream << '|' << std::string((currentSiblings.Depth * 2) - 1, '-');
+            }
+
+            unitStream << Utility::ConvertToUTF8(currentUnit.Type());
+
+            auto identifier = currentUnit.Identifier();
+            if (!identifier.empty())
+            {
+                unitStream << " [" << Utility::ConvertControlCodesToPictures(Utility::ConvertToUTF8(identifier)) << ']';
+            }
+
+            auto resultInformation = currentUnit.ResultInformation();
+            std::ostringstream resultStream;
+            std::string resultDetails;
+
+            if (resultInformation)
+            {
+                resultStream << "0x" << Logging::SetHRFormat << resultInformation.ResultCode();
+
+                auto description = resultInformation.Description();
+                if (description.empty())
+                {
+                    description = resultInformation.Details();
+                }
+
+                resultDetails = Utility::ConvertControlCodesToPictures(Utility::ConvertToUTF8(description));
+            }
+
+            unitTable.OutputLine({ std::move(unitStream).str(), anon::ToLocString(currentUnit.State()), std::move(resultStream).str(), std::move(resultDetails) });
+
+            if (currentUnit.IsGroup())
+            {
+                UnitSiblings unitChildren;
+                unitChildren.Depth = currentSiblings.Depth + 1;
+                auto units = currentUnit.Units();
+                unitChildren.Siblings.resize(units.Size());
+                units.GetMany(0, unitChildren.Siblings);
+                stack.emplace_back(std::move(unitChildren));
+            }
+        }
+
+        unitTable.Complete();
+    }
+
+    void CompleteConfigurationHistoryItem(Execution::Context& context)
+    {
+        const std::string& word = context.Get<Data::CompletionData>().Word();
+        auto stream = context.Reporter.Completion();
+
+        for (const auto& historyItem : ConfigurationProcessor{ IConfigurationSetProcessorFactory{ nullptr } }.GetConfigurationHistory())
+        {
+            std::ostringstream identifierStream;
+            identifierStream << historyItem.InstanceIdentifier();
+            std::string identifier = identifierStream.str();
+
+            if (word.empty() || Utility::CaseInsensitiveContainsSubstring(identifier, word))
+            {
+                stream << '"' << identifier << '"' << std::endl;
+            }
+
+            std::string name = Utility::ConvertToUTF8(historyItem.Name());
+
+            if (word.empty() || Utility::CaseInsensitiveStartsWith(name, word))
+            {
+                stream << '"' << name << '"' << std::endl;
+            }
+        }
+    }
+
+    void MonitorConfigurationStatus(Execution::Context& context)
+    {
+        auto& configurationContext = context.Get<Data::ConfigurationContext>();
+
+        std::mutex activeSetMutex;
+        ConfigurationSet activeSet{ nullptr };
+        decltype(activeSet.ConfigurationSetChange(winrt::auto_revoke, nullptr)) activeSetRevoker;
+
+        auto setChangeHandler = [&](const ConfigurationSet& set, const ConfigurationSetChangeData& changeData)
+            {
+                if (changeData.Change() == ConfigurationSetChangeEventType::SetStateChanged)
+                {
+                    context.Reporter.Info() << "(SetStateChanged) " << set.InstanceIdentifier() << " :: " << anon::ToLocString(changeData.SetState()) << std::endl;
+                }
+                else if (changeData.Change() == ConfigurationSetChangeEventType::UnitStateChanged)
+                {
+                    context.Reporter.Info() << "(UnitStateChanged) " << changeData.Unit().InstanceIdentifier() << " :: " << anon::ToLocString(changeData.UnitState()) << std::endl;
+
+                    auto resultInformation = changeData.ResultInformation();
+                    if (resultInformation)
+                    {
+                        context.Reporter.Info() << "    [" << anon::ToString(resultInformation.ResultSource()) << "] :: 0x" << Logging::SetHRFormat << resultInformation.ResultCode() << std::endl;
+                    }
+                }
+            };
+
+        auto setActiveSet = [&](const ConfigurationSet& set, bool force)
+            {
+                std::lock_guard<std::mutex> lock{ activeSetMutex };
+
+                if (force || !activeSet)
+                {
+                    activeSet = set;
+                    activeSetRevoker = activeSet.ConfigurationSetChange(winrt::auto_revoke, setChangeHandler);
+                }
+            };
+
+        auto processorRevoker = configurationContext.Processor().ConfigurationChange(winrt::auto_revoke, [&](const ConfigurationSet& set, const ConfigurationChangeData& changeData)
+            {
+                context.Reporter.Info() << '[' << anon::ToString(changeData.Change()) << "] " << changeData.InstanceIdentifier() << " :: " << anon::ToLocString(changeData.State()) << std::endl;
+
+                if (changeData.Change() == ConfigurationChangeEventType::SetStateChanged && changeData.State() == ConfigurationSetState::InProgress)
+                {
+                    setActiveSet(set, true);
+                }
+            });
+
+        for (ConfigurationSet& historySet : configurationContext.History())
+        {
+            if (historySet.State() == ConfigurationSetState::InProgress)
+            {
+                setActiveSet(historySet, false);
+            }
+        }
+
+        for (;;)
+        {
+            std::this_thread::sleep_for(250ms);
+            if (context.IsTerminated())
+            {
+                return;
+            }
         }
     }
 }

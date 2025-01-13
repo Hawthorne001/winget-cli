@@ -80,7 +80,7 @@ namespace AppInstaller::Manifest
                 }
             }
 
-            for (const Version& ext : m_extensions)
+            for (const RawVersion& ext : m_extensions)
             {
                 if (ext.GetParts().empty() || ext.GetParts()[0].Integer != 0)
                 {
@@ -105,7 +105,7 @@ namespace AppInstaller::Manifest
 
     bool ManifestVer::HasExtension(std::string_view extension) const
     {
-        for (const Version& ext : m_extensions)
+        for (const RawVersion& ext : m_extensions)
         {
             const auto& parts = ext.GetParts();
             if (!parts.empty() && parts[0].Integer == 0 && parts[0].Other == extension)
@@ -658,20 +658,20 @@ namespace AppInstaller::Manifest
         return "unknown"sv;
     }
 
-    std::string_view PlatformToString(PlatformEnum platform)
+    std::string_view PlatformToString(PlatformEnum platform, bool shortString)
     {
         switch (platform)
         {
         case PlatformEnum::Desktop:
-            return "Windows.Desktop"sv;
+            return shortString ? "Desktop" : "Windows.Desktop"sv;
         case PlatformEnum::Universal:
-            return "Windows.Universal"sv;
+            return shortString ? "Universal" : "Windows.Universal"sv;
         case PlatformEnum::IoT:
-            return "Windows.IoT"sv;
+            return shortString ? "IoT" : "Windows.IoT"sv;
         case PlatformEnum::Holographic:
-            return "Windows.Holographic"sv;
+            return shortString ? "Holographic" : "Windows.Holographic"sv;
         case PlatformEnum::Team:
-            return "Windows.Team"sv;
+            return shortString ? "Team" : "Windows.Team"sv;
         }
 
         return "Unknown"sv;
@@ -1113,22 +1113,11 @@ namespace AppInstaller::Manifest
     {
         Dependency* existingDependency = this->HasDependency(newDependency);
 
-        if (existingDependency != NULL) {
-            if (newDependency.MinVersion)
+        if (existingDependency != NULL)
+        {
+            if (newDependency.MinVersion > existingDependency->MinVersion)
             {
-                if (existingDependency->MinVersion)
-                {
-                    const auto& newDependencyVersion = Utility::Version(newDependency.MinVersion.value());
-                    const auto& existingDependencyVersion = Utility::Version(existingDependency->MinVersion.value());
-                    if (newDependencyVersion > existingDependencyVersion)
-                    {
-                        existingDependency->MinVersion.value() = newDependencyVersion.ToString();
-                    }
-                }
-                else
-                {
-                    existingDependency->MinVersion.value() = newDependency.MinVersion.value();
-                }
+                existingDependency->MinVersion = newDependency.MinVersion;
             }
         }
         else
@@ -1168,7 +1157,7 @@ namespace AppInstaller::Manifest
     }
 
     // for testing purposes
-    bool DependencyList::HasExactDependency(DependencyType type, string_t id, string_t minVersion)
+    bool DependencyList::HasExactDependency(DependencyType type, const string_t& id, const string_t& minVersion)
     {
         for (const auto& dependency : m_dependencies)
         {
@@ -1176,7 +1165,7 @@ namespace AppInstaller::Manifest
             {
                 if (!minVersion.empty())
                 {
-                    return dependency.MinVersion.has_value() && dependency.MinVersion.value() == Utility::Version{ minVersion };
+                    return dependency.MinVersion == Utility::Version{ minVersion };
                 }
                 else
                 {

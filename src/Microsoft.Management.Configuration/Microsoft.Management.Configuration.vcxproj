@@ -131,7 +131,7 @@
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
       <ModuleDefinitionFile>Microsoft_Management_Configuration.def</ModuleDefinitionFile>
       <WindowsMetadataFile>$(OutDir)$(ProjectName).winmd</WindowsMetadataFile>
-      <AdditionalDependencies>Advapi32.lib;onecoreuap.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Advapi32.lib;onecoreuap.lib;winsqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -207,6 +207,7 @@
     <ClInclude Include="ConfigurationConflictSetting.h" />
     <ClInclude Include="ConfigurationParameter.h" />
     <ClInclude Include="ConfigurationProcessor.h" />
+    <ClInclude Include="ConfigurationSequencer.h" />
     <ClInclude Include="ConfigurationSet.h" />
     <ClInclude Include="ConfigurationSetApplyProcessor.h" />
     <ClInclude Include="ConfigurationSetChangeData.h" />
@@ -217,13 +218,26 @@
     <ClInclude Include="ConfigurationSetParser_0_3.h" />
     <ClInclude Include="ConfigurationSetSerializer.h" />
     <ClInclude Include="ConfigurationSetSerializer_0_2.h" />
+    <ClInclude Include="ConfigurationSetSerializer_0_3.h" />
     <ClInclude Include="ConfigurationSetUtilities.h" />
     <ClInclude Include="ConfigurationStaticFunctions.h" />
+    <ClInclude Include="ConfigurationStatus.h" />
     <ClInclude Include="ConfigurationUnit.h" />
     <ClInclude Include="ConfigurationUnitResultInformation.h" />
+    <ClInclude Include="Database\ConfigurationDatabase.h" />
+    <ClInclude Include="Database\Schema\0_1\Interface.h" />
+    <ClInclude Include="Database\Schema\0_1\SetInfoTable.h" />
+    <ClInclude Include="Database\Schema\0_1\UnitInfoTable.h" />
+    <ClInclude Include="Database\Schema\0_2\Interface.h" />
+    <ClInclude Include="Database\Schema\0_2\QueueTable.h" />
+    <ClInclude Include="Database\Schema\0_3\ChangeListenerTable.h" />
+    <ClInclude Include="Database\Schema\0_3\Interface.h" />
+    <ClInclude Include="Database\Schema\0_3\StatusItemTable.h" />
+    <ClInclude Include="Database\Schema\IConfigurationDatabase.h" />
     <ClInclude Include="DefaultSetGroupProcessor.h" />
     <ClInclude Include="DiagnosticInformationInstance.h" />
     <ClInclude Include="ExceptionResultHelpers.h" />
+    <ClInclude Include="Filesystem.h" />
     <ClInclude Include="GetAllConfigurationUnitSettingsResult.h" />
     <ClInclude Include="GetConfigurationSetDetailsResult.h" />
     <ClInclude Include="GetConfigurationUnitDetailsResult.h" />
@@ -249,6 +263,7 @@
     <ClCompile Include="ConfigurationConflictSetting.cpp" />
     <ClCompile Include="ConfigurationParameter.cpp" />
     <ClCompile Include="ConfigurationProcessor.cpp" />
+    <ClCompile Include="ConfigurationSequencer.cpp" />
     <ClCompile Include="ConfigurationSet.cpp" />
     <ClCompile Include="ConfigurationSetApplyProcessor.cpp" />
     <ClCompile Include="ConfigurationSetChangeData.cpp" />
@@ -258,12 +273,25 @@
     <ClCompile Include="ConfigurationSetParser_0_3.cpp" />
     <ClCompile Include="ConfigurationSetSerializer.cpp" />
     <ClCompile Include="ConfigurationSetSerializer_0_2.cpp" />
+    <ClCompile Include="ConfigurationSetSerializer_0_3.cpp" />
     <ClCompile Include="ConfigurationSetUtilities.cpp" />
     <ClCompile Include="ConfigurationStaticFunctions.cpp" />
+    <ClCompile Include="ConfigurationStatus.cpp" />
     <ClCompile Include="ConfigurationUnit.cpp" />
     <ClCompile Include="ConfigurationUnitResultInformation.cpp" />
+    <ClCompile Include="Database\ConfigurationDatabase.cpp" />
+    <ClCompile Include="Database\Schema\0_1\Interface_0_1.cpp" />
+    <ClCompile Include="Database\Schema\0_1\SetInfoTable.cpp" />
+    <ClCompile Include="Database\Schema\0_1\UnitInfoTable.cpp" />
+    <ClCompile Include="Database\Schema\0_2\Interface_0_2.cpp" />
+    <ClCompile Include="Database\Schema\0_2\QueueTable.cpp" />
+    <ClCompile Include="Database\Schema\0_3\ChangeListenerTable.cpp" />
+    <ClCompile Include="Database\Schema\0_3\Interface_0_3.cpp" />
+    <ClCompile Include="Database\Schema\0_3\StatusItemTable.cpp" />
+    <ClCompile Include="Database\Schema\IConfigurationDatabase.cpp" />
     <ClCompile Include="DefaultSetGroupProcessor.cpp" />
     <ClCompile Include="DiagnosticInformationInstance.cpp" />
+    <ClCompile Include="Filesystem.cpp" />
     <ClCompile Include="GetAllConfigurationUnitSettingsResult.cpp" />
     <ClCompile Include="GetConfigurationSetDetailsResult.cpp" />
     <ClCompile Include="GetConfigurationUnitDetailsResult.cpp" />

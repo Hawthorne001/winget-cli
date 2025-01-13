@@ -880,7 +880,7 @@ namespace AppInstaller::Repository
         // AddSourceForDetails will also check for empty, but we need the actual type before that for validation.
         if (sourceDetails.Type.empty())
         {
-            sourceDetails.Type = ISourceFactory::GetForType("")->TypeName();
+            sourceDetails.Type = GetDefaultSourceType();
         }
 
         AICLI_LOG(Repo, Info, << "Adding source: Name[" << sourceDetails.Name << "], Type[" << sourceDetails.Type << "], Arg[" << sourceDetails.Arg << "]");
@@ -983,12 +983,19 @@ namespace AppInstaller::Repository
 
     PackageTrackingCatalog Source::GetTrackingCatalog() const
     {
-        if (!m_trackingCatalog)
+        // With C++20, consider removing the shared_ptr here and making the one inside PackageTrackingCatalog atomic.
+        std::shared_ptr<PackageTrackingCatalog> currentTrackingCatalog = std::atomic_load(&m_trackingCatalog);
+        if (!currentTrackingCatalog)
         {
-            m_trackingCatalog = PackageTrackingCatalog::CreateForSource(*this);
+            std::shared_ptr<PackageTrackingCatalog> newTrackingCatalog = std::make_shared<PackageTrackingCatalog>(PackageTrackingCatalog::CreateForSource(*this));
+
+            if (std::atomic_compare_exchange_strong(&m_trackingCatalog, &currentTrackingCatalog, newTrackingCatalog))
+            {
+                currentTrackingCatalog = newTrackingCatalog;
+            }
         }
 
-        return m_trackingCatalog;
+        return *currentTrackingCatalog;
     }
 
     std::vector<SourceDetails> Source::GetCurrentSources()
@@ -1031,6 +1038,11 @@ namespace AppInstaller::Repository
                 return true;
             }
         }
+    }
+
+    std::string_view Source::GetDefaultSourceType()
+    {
+        return ISourceFactory::GetForType("")->TypeName();
     }
 
 #ifndef AICLI_DISABLE_TEST_HOOKS
