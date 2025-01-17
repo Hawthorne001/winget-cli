@@ -5,6 +5,7 @@
 #include "ConfigurationSet.g.cpp"
 #include "ConfigurationSetParser.h"
 #include "ConfigurationSetSerializer.h"
+#include "Database/ConfigurationDatabase.h"
 
 namespace winrt::Microsoft::Management::Configuration::implementation
 {
@@ -13,7 +14,7 @@ namespace winrt::Microsoft::Management::Configuration::implementation
         GUID instanceIdentifier;
         THROW_IF_FAILED(CoCreateGuid(&instanceIdentifier));
         m_instanceIdentifier = instanceIdentifier;
-        m_schemaVersion = ConfigurationSetParser::LatestVersion();
+        std::tie(m_schemaVersion, m_schemaUri) = ConfigurationSetParser::LatestVersion();
     }
 
     ConfigurationSet::ConfigurationSet(const guid& instanceIdentifier) :
@@ -29,11 +30,6 @@ namespace winrt::Microsoft::Management::Configuration::implementation
     void ConfigurationSet::Parameters(std::vector<Configuration::ConfigurationParameter>&& value)
     {
         m_parameters = winrt::multi_threaded_vector<Configuration::ConfigurationParameter>(std::move(value));
-    }
-
-    bool ConfigurationSet::IsFromHistory() const
-    {
-        return false;
     }
 
     hstring ConfigurationSet::Name()
@@ -73,22 +69,26 @@ namespace winrt::Microsoft::Management::Configuration::implementation
 
     ConfigurationSetState ConfigurationSet::State()
     {
-        return ConfigurationSetState::Unknown;
+        auto status = ConfigurationStatus::Instance();
+        return status->GetSetState(m_instanceIdentifier);
     }
 
     clock::time_point ConfigurationSet::FirstApply()
     {
-        return m_firstApply;
+        auto status = ConfigurationStatus::Instance();
+        return status->GetSetFirstApply(m_instanceIdentifier);
     }
 
     clock::time_point ConfigurationSet::ApplyBegun()
     {
-        return clock::time_point{};
+        auto status = ConfigurationStatus::Instance();
+        return status->GetSetApplyBegun(m_instanceIdentifier);
     }
 
     clock::time_point ConfigurationSet::ApplyEnded()
     {
-        return clock::time_point{};
+        auto status = ConfigurationStatus::Instance();
+        return status->GetSetApplyEnded(m_instanceIdentifier);
     }
 
     Windows::Foundation::Collections::IVector<Configuration::ConfigurationUnit> ConfigurationSet::Units()
@@ -114,14 +114,48 @@ namespace winrt::Microsoft::Management::Configuration::implementation
         m_schemaVersion = value;
     }
 
-    event_token ConfigurationSet::ConfigurationSetChange(const Windows::Foundation::TypedEventHandler<WinRT_Self, ConfigurationSetChangeData>& handler)
+    void ConfigurationSet::ConfigurationSetChange(com_ptr<ConfigurationSetChangeData>& data, const std::optional<guid>& unitInstanceIdentifier) try
     {
+        if (unitInstanceIdentifier)
+        {
+            Windows::Foundation::Collections::IVector<ConfigurationUnit> comUnits = m_units;
+
+            std::vector<ConfigurationUnit> units{ comUnits.Size() };
+            units.resize(comUnits.GetMany(0, units));
+
+            for (const ConfigurationUnit& unit : units)
+            {
+                if (unit.InstanceIdentifier() == unitInstanceIdentifier.value())
+                {
+                    data->Unit(unit);
+                    break;
+                }
+            }
+        }
+
+        m_configurationSetChange(*get_strong(), *data);
+    }
+    CATCH_LOG();
+
+    event_token ConfigurationSet::ConfigurationSetChange(const Windows::Foundation::TypedEventHandler<WinRT_Self, Configuration::ConfigurationSetChangeData>& handler)
+    {
+        if (!m_configurationSetChange)
+        {
+            auto status = ConfigurationStatus::Instance();
+            std::atomic_store(&m_setChangeRegistration, status->RegisterForSetChange(*this));
+        }
+
         return m_configurationSetChange.add(handler);
     }
 
     void ConfigurationSet::ConfigurationSetChange(const event_token& token) noexcept
     {
         m_configurationSetChange.remove(token);
+
+        if (!m_configurationSetChange)
+        {
+            std::atomic_store(&m_setChangeRegistration, {});
+        }
     }
 
     void ConfigurationSet::Serialize(const Windows::Storage::Streams::IOutputStream& stream)
@@ -139,7 +173,9 @@ namespace winrt::Microsoft::Management::Configuration::implementation
 
     void ConfigurationSet::Remove()
     {
-        THROW_HR(E_NOTIMPL);
+        ConfigurationDatabase database;
+        database.EnsureOpened(false);
+        database.RemoveSetHistory(*get_strong());
     }
 
     Windows::Foundation::Collections::ValueSet ConfigurationSet::Metadata()

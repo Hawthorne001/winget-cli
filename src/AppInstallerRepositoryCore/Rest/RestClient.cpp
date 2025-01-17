@@ -8,6 +8,7 @@
 #include "Rest/Schema/1_5/Interface.h"
 #include "Rest/Schema/1_6/Interface.h"
 #include "Rest/Schema/1_7/Interface.h"
+#include "Rest/Schema/1_9/Interface.h"
 #include "Rest/Schema/InformationResponseDeserializer.h"
 #include "Rest/Schema/CommonRestConstants.h"
 #include <winget/HttpClientHelper.h>
@@ -22,14 +23,14 @@ using namespace AppInstaller::Http;
 namespace AppInstaller::Repository::Rest
 {
     // Supported versions
-    std::set<Version> WingetSupportedContracts = { Version_1_0_0, Version_1_1_0, Version_1_4_0, Version_1_5_0, Version_1_6_0, Version_1_7_0 };
+    std::set<Version> WingetSupportedContracts = { Version_1_0_0, Version_1_1_0, Version_1_4_0, Version_1_5_0, Version_1_6_0, Version_1_7_0, Version_1_9_0 };
 
     constexpr std::string_view WindowsPackageManagerHeader = "Windows-Package-Manager"sv;
     constexpr size_t WindowsPackageManagerHeaderMaxLength = 1024;
 
     namespace
     {
-        HttpClientHelper::HttpRequestHeaders GetHeaders(std::optional<std::string> customHeader, std::string_view caller)
+        HttpClientHelper::HttpRequestHeaders GetHeaders(const std::optional<std::string>& customHeader, std::string_view caller)
         {
             HttpClientHelper::HttpRequestHeaders headers;
 
@@ -134,7 +135,7 @@ namespace AppInstaller::Repository::Rest
         return *commonVersions.rbegin();
     }
 
-    Schema::IRestClient::Information RestClient::GetInformation(const std::string& restApi, std::optional<std::string> customHeader, std::string_view caller, const HttpClientHelper& helper)
+    Schema::IRestClient::Information RestClient::GetInformation(const std::string& restApi, const std::optional<std::string>& customHeader, std::string_view caller, const HttpClientHelper& helper)
     {
         utility::string_t restEndpoint = AppInstaller::Rest::GetRestAPIBaseUri(restApi);
         THROW_HR_IF(APPINSTALLER_CLI_ERROR_RESTSOURCE_INVALID_URL, !AppInstaller::Rest::IsValidUri(restEndpoint));
@@ -176,18 +177,27 @@ namespace AppInstaller::Repository::Rest
         {
             return std::make_unique<Schema::V1_7::Interface>(api, helper, information, additionalHeaders, authArgs);
         }
+        else if (version == Version_1_9_0)
+        {
+            return std::make_unique<Schema::V1_9::Interface>(api, helper, information, additionalHeaders, authArgs);
+        }
 
         THROW_HR(APPINSTALLER_CLI_ERROR_RESTSOURCE_INVALID_VERSION);
     }
 
-    RestClient RestClient::Create(const std::string& restApi, std::optional<std::string> customHeader, std::string_view caller, const HttpClientHelper& helper, const Authentication::AuthenticationArguments& authArgs)
+    RestClient RestClient::Create(
+        const std::string& restApi,
+        const std::optional<std::string>& customHeader,
+        std::string_view caller,
+        const HttpClientHelper& helper,
+        const Schema::IRestClient::Information& information,
+        const Authentication::AuthenticationArguments& authArgs)
     {
         utility::string_t restEndpoint = AppInstaller::Rest::GetRestAPIBaseUri(restApi);
         THROW_HR_IF(APPINSTALLER_CLI_ERROR_RESTSOURCE_INVALID_URL, !AppInstaller::Rest::IsValidUri(restEndpoint));
 
         auto headers = GetHeaders(customHeader, caller);
 
-        IRestClient::Information information = GetInformationInternal(restEndpoint, headers, helper);
         std::optional<Version> latestCommonVersion = GetLatestCommonVersion(information.ServerSupportedVersions, WingetSupportedContracts);
         THROW_HR_IF(APPINSTALLER_CLI_ERROR_UNSUPPORTED_RESTSOURCE, !latestCommonVersion);
 

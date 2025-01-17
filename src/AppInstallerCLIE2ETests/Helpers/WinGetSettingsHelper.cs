@@ -41,13 +41,20 @@ namespace AppInstallerCLIE2ETests.Helpers
             Hashtable experimentalFeatures = new Hashtable();
 
             var forcedExperimentalFeatures = ForcedExperimentalFeatures;
-            foreach (var feature in forcedExperimentalFeatures)
+            if (forcedExperimentalFeatures != null)
             {
-                experimentalFeatures[feature] = true;
+                foreach (var feature in forcedExperimentalFeatures)
+                {
+                    experimentalFeatures[feature] = true;
+                }
             }
 
             var settingsJson = new Hashtable()
             {
+                {
+                    "$schema",
+                    "https://aka.ms/winget-settings.schema.json"
+                },
                 {
                     "experimentalFeatures",
                     experimentalFeatures
@@ -62,6 +69,12 @@ namespace AppInstallerCLIE2ETests.Helpers
                 },
                 {
                     "installBehavior",
+                    new Hashtable()
+                    {
+                    }
+                },
+                {
+                    "configureBehavior",
                     new Hashtable()
                     {
                     }
@@ -97,6 +110,20 @@ namespace AppInstallerCLIE2ETests.Helpers
             JObject settingsJson = GetJsonSettingsObject("installBehavior");
             var installBehavior = settingsJson["installBehavior"];
             installBehavior[settingName] = value;
+
+            SetWingetSettings(settingsJson);
+        }
+
+        /// <summary>
+        /// Configure the configuration behavior.
+        /// </summary>
+        /// <param name="settingName">Setting name.</param>
+        /// <param name="value">Setting value.</param>
+        public static void ConfigureConfigureBehavior(string settingName, string value)
+        {
+            JObject settingsJson = GetJsonSettingsObject("configureBehavior");
+            var configureBehavior = settingsJson["configureBehavior"];
+            configureBehavior[settingName] = value;
 
             SetWingetSettings(settingsJson);
         }
@@ -234,9 +261,12 @@ namespace AppInstallerCLIE2ETests.Helpers
         private static void SetWingetSettings(JObject settingsJson)
         {
             var forcedExperimentalFeatures = ForcedExperimentalFeatures;
-            foreach (var feature in forcedExperimentalFeatures)
+            if (forcedExperimentalFeatures != null)
             {
-                ConfigureFeature(settingsJson, feature, true);
+                foreach (var feature in forcedExperimentalFeatures)
+                {
+                    ConfigureFeature(settingsJson, feature, true);
+                }
             }
 
             SetWingetSettings(settingsJson.ToString());

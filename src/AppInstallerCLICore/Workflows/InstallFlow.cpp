@@ -145,6 +145,8 @@ namespace AppInstaller::CLI::Workflow
                     return ExpectedReturnCode(returnCode, APPINSTALLER_CLI_ERROR_INSTALL_BLOCKED_BY_POLICY, Resource::String::InstallFlowReturnCodeBlockedByPolicy);
                 case ExpectedReturnCodeEnum::SystemNotSupported:
                     return ExpectedReturnCode(returnCode, APPINSTALLER_CLI_ERROR_INSTALL_SYSTEM_NOT_SUPPORTED, Resource::String::InstallFlowReturnCodeSystemNotSupported);
+                case ExpectedReturnCodeEnum::Custom:
+                    return ExpectedReturnCode(returnCode, APPINSTALLER_CLI_ERROR_INSTALL_CUSTOM_ERROR, Resource::String::InstallFlowReturnCodeCustomError);
                 default:
                     THROW_HR(E_UNEXPECTED);
                 }
@@ -189,6 +191,7 @@ namespace AppInstaller::CLI::Workflow
         void MsixInstall(Execution::Context& context)
         {
             std::string uri;
+            Deployment::Options deploymentOptions;
             if (context.Contains(Execution::Data::InstallerPath))
             {
                 uri = context.Get<Execution::Data::InstallerPath>().u8string();
@@ -196,7 +199,10 @@ namespace AppInstaller::CLI::Workflow
             else
             {
                 uri = context.Get<Execution::Data::Installer>()->Url;
+                deploymentOptions.ExpectedDigests = context.Get<Execution::Data::MsixDigests>();
             }
+
+            deploymentOptions.SkipReputationCheck = WI_IsFlagSet(context.GetFlags(), Execution::ContextFlag::InstallerTrusted);
 
             bool isMachineScope = Manifest::ConvertToScopeEnum(context.Args.GetArg(Execution::Args::Type::InstallScope)) == Manifest::ScopeEnum::Machine;
 
@@ -220,11 +226,11 @@ namespace AppInstaller::CLI::Workflow
                     {
                         if (isMachineScope)
                         {
-                            return Deployment::AddPackageMachineScope(uri, callback);
+                            return Deployment::AddPackageMachineScope(uri, deploymentOptions, callback);
                         }
                         else
                         {
-                            return Deployment::AddPackageWithDeferredFallback(uri, WI_IsFlagSet(context.GetFlags(), Execution::ContextFlag::InstallerTrusted), callback);
+                            return Deployment::AddPackageWithDeferredFallback(uri, deploymentOptions, callback);
                         }
                     });
             }
@@ -497,7 +503,7 @@ namespace AppInstaller::CLI::Workflow
                 if (FAILED(terminationHR))
                 {
                     context.Reporter.Error() << returnCode.Message << std::endl;
-                    auto returnResponseUrl = expectedReturnCodeItr->second.ReturnResponseUrl;
+                    const auto& returnResponseUrl = expectedReturnCodeItr->second.ReturnResponseUrl;
                     if (!returnResponseUrl.empty())
                     {
                         context.Reporter.Error() << Resource::String::RelatedLink << ' ' << returnResponseUrl << std::endl;

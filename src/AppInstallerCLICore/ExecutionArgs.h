@@ -121,15 +121,22 @@ namespace AppInstaller::CLI::Execution
             ResumeId,
             IgnoreResumeLimit,
 
+            // Font Command
+            Family,
+
             // Configuration
             ConfigurationFile,
             ConfigurationAcceptWarning,
+            ConfigurationSuppressPrologue,
             ConfigurationEnable,
             ConfigurationDisable,
             ConfigurationModulePath,
             ConfigurationExportPackageId,
             ConfigurationExportModule,
             ConfigurationExportResource,
+            ConfigurationHistoryItem,
+            ConfigurationHistoryRemove,
+            ConfigurationStatusWatch,
 
             // Common arguments
             NoVT, // Disable VirtualTerminal outputs

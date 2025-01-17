@@ -15,6 +15,7 @@
 #include "ValidateCommand.h"
 #include "SettingsCommand.h"
 #include "FeaturesCommand.h"
+#include "FontCommand.h"
 #include "ExperimentalCommand.h"
 #include "CompleteCommand.h"
 #include "ExportCommand.h"
@@ -153,6 +154,7 @@ namespace AppInstaller::CLI
             keyDirectories.OutputLine({ Resource::LocString{ Resource::String::PortableRoot }, Runtime::GetPathTo(Runtime::PathName::PortablePackageMachineRoot, true).u8string() });
             keyDirectories.OutputLine({ Resource::LocString{ Resource::String::PortableRoot86 }, Runtime::GetPathTo(Runtime::PathName::PortablePackageMachineRootX86, true).u8string() });
             keyDirectories.OutputLine({ Resource::LocString{ Resource::String::InstallerDownloads }, Runtime::GetPathTo(Runtime::PathName::UserProfileDownloads, true).u8string() });
+            keyDirectories.OutputLine({ Resource::LocString{ Resource::String::ConfigurationModules }, Runtime::GetPathTo(Runtime::PathName::ConfigurationModules, true).u8string() });
             keyDirectories.Complete();
             context.Reporter.Info() << std::endl;
         }
@@ -194,6 +196,7 @@ namespace AppInstaller::CLI
             std::make_unique<ErrorCommand>(FullName()),
             std::make_unique<ResumeCommand>(FullName()),
             std::make_unique<RepairCommand>(FullName()),
+            std::make_unique<FontCommand>(FullName()),
 #if _DEBUG
             std::make_unique<DebugCommand>(FullName()),
 #endif

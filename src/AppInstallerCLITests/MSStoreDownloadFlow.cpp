@@ -22,7 +22,7 @@ utility::string_t TestDisplayCatalogResponse = _XPLATSTR(
         "DisplaySkuAvailabilities": [
           {
             "Sku": {
-              "SkuId": "0010",
+              "SkuId": "0015",
               "Properties": {
                 "Packages": [
                   {
@@ -212,7 +212,7 @@ std::vector<SFS::AppContent> GetSfsAppContentsOverrideFunction(std::string_view 
             "https://NotUsed/" + wuCategoryIdStr + "/Xbox/arm",
             100,
             { { SFS::HashType::Sha256, base64EncodedSha256 } },
-            { SFS::Architecture::Amd64 },
+            { SFS::Architecture::Arm },
             { "Xbox=10.0.0.0" },
             wuCategoryIdStr + ".Xbox_1.0.0.0_arm__8wekyb3d8bbwe",
             packageXbox);
@@ -225,7 +225,7 @@ std::vector<SFS::AppContent> GetSfsAppContentsOverrideFunction(std::string_view 
             "https://NotUsed/" + wuCategoryIdStr + "/cab",
             100,
             { { SFS::HashType::Sha256, base64EncodedSha256 } },
-            { SFS::Architecture::Amd64 },
+            { SFS::Architecture::Arm },
             { "Desktop=10.0.0.0" },
             wuCategoryIdStr + ".Data_1.0.0.0_arm__8wekyb3d8bbwe",
             packageData);
@@ -242,8 +242,6 @@ std::vector<SFS::AppContent> GetSfsAppContentsOverrideFunction(std::string_view 
 
 TEST_CASE("MSStoreDownloadFlow_Success", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -265,11 +263,11 @@ TEST_CASE("MSStoreDownloadFlow_Success", "[MSStoreDownloadFlow][workflow]")
     // Verify downloaded files
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath()));
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_arm__8wekyb3d8bbwe.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_IoT_Arm.appx"));
 
     // Verify license
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"9WZDNCRFJ364_License.xml"));
@@ -280,15 +278,13 @@ TEST_CASE("MSStoreDownloadFlow_Success", "[MSStoreDownloadFlow][workflow]")
     REQUIRE(licenseFileStr == LicenseContent);
 
     // Verify unsupported packages filtered out
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.Xbox_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.Data_1.0.0.0_arm__8wekyb3d8bbwe.cab"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_1.0.0.0_IoT_Arm.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.Xbox_1.0.0.0_Xbox_Arm.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.Data_1.0.0.0_Desktop_Arm.cab"));
 }
 
 TEST_CASE("MSStoreDownloadFlow_Success_SkipDependencies", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -311,11 +307,11 @@ TEST_CASE("MSStoreDownloadFlow_Success_SkipDependencies", "[MSStoreDownloadFlow]
     // Verify downloaded files
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath()));
     REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_arm__8wekyb3d8bbwe.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_X64.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_IoT_Arm.appx"));
 
     // Verify license
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"9WZDNCRFJ364_License.xml"));
@@ -328,8 +324,6 @@ TEST_CASE("MSStoreDownloadFlow_Success_SkipDependencies", "[MSStoreDownloadFlow]
 
 TEST_CASE("MSStoreDownloadFlow_Success_SkipLicense", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -352,11 +346,11 @@ TEST_CASE("MSStoreDownloadFlow_Success_SkipLicense", "[MSStoreDownloadFlow][work
     // Verify downloaded files
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath()));
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_arm__8wekyb3d8bbwe.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_IoT_Arm.appx"));
 
     // Verify license
     REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"9WZDNCRFJ364_License.xml"));
@@ -364,8 +358,6 @@ TEST_CASE("MSStoreDownloadFlow_Success_SkipLicense", "[MSStoreDownloadFlow][work
 
 TEST_CASE("MSStoreDownloadFlow_Success_SpecificLocale", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -387,11 +379,11 @@ TEST_CASE("MSStoreDownloadFlow_Success_SpecificLocale", "[MSStoreDownloadFlow][w
     // Verify downloaded files
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath()));
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdFrench.Dependency_1.2.3.4_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdFrench.Dependency_1.2.3.4_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdFrench_1.0.0.0_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdFrench_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdFrench.IoT_2.0.0.0_arm__8wekyb3d8bbwe.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdFrench.Dependency_1.2.3.4_Universal_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdFrench.Dependency_1.2.3.4_Universal_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdFrench_1.0.0.0_Desktop_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdFrench_1.0.0.0_Desktop_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdFrench.IoT_2.0.0.0_IoT_Arm.appx"));
 
     // Verify license
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"9WZDNCRFJ364_License.xml"));
@@ -404,8 +396,6 @@ TEST_CASE("MSStoreDownloadFlow_Success_SpecificLocale", "[MSStoreDownloadFlow][w
 
 TEST_CASE("MSStoreDownloadFlow_Success_SpecificArchitecture", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -428,11 +418,11 @@ TEST_CASE("MSStoreDownloadFlow_Success_SpecificArchitecture", "[MSStoreDownloadF
     // Verify downloaded files
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath()));
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_arm__8wekyb3d8bbwe.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_x64.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_X64.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_Arm.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_IoT_Arm.appx"));
 
     // Verify license
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"9WZDNCRFJ364_License.xml"));
@@ -445,8 +435,6 @@ TEST_CASE("MSStoreDownloadFlow_Success_SpecificArchitecture", "[MSStoreDownloadF
 
 TEST_CASE("MSStoreDownloadFlow_Success_SpecificPlatform", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -469,11 +457,11 @@ TEST_CASE("MSStoreDownloadFlow_Success_SpecificPlatform", "[MSStoreDownloadFlow]
     // Verify downloaded files
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath()));
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_x64__8wekyb3d8bbwe.appx"));
-    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_arm__8wekyb3d8bbwe.appx"));
-    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_arm__8wekyb3d8bbwe.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_X64.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"Dependencies" / L"TestCategoryIdEnglish.Dependency_1.2.3.4_Universal_Arm.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_X64.appx"));
+    REQUIRE_FALSE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish_1.0.0.0_Desktop_Arm.appx"));
+    REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"TestCategoryIdEnglish.IoT_2.0.0.0_IoT_Arm.appx"));
 
     // Verify license
     REQUIRE(std::filesystem::exists(tempDirectory.GetPath() / L"9WZDNCRFJ364_License.xml"));
@@ -486,8 +474,6 @@ TEST_CASE("MSStoreDownloadFlow_Success_SpecificPlatform", "[MSStoreDownloadFlow]
 
 TEST_CASE("MSStoreDownloadFlow_Fail_TargetSkuNotFound", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -501,14 +487,13 @@ TEST_CASE("MSStoreDownloadFlow_Fail_TargetSkuNotFound", "[MSStoreDownloadFlow][w
     context.Args.AddArg(Execution::Args::Type::Locale, "en-US"sv);
 
     DownloadCommand download({});
-    REQUIRE_THROWS_HR(download.Execute(context), APPINSTALLER_CLI_ERROR_NO_APPLICABLE_DISPLAYCATALOG_PACKAGE);
+    download.Execute(context);
+    REQUIRE_TERMINATED_WITH(context, APPINSTALLER_CLI_ERROR_NO_APPLICABLE_DISPLAYCATALOG_PACKAGE);
     INFO(downloadOutput.str());
 }
 
 TEST_CASE("MSStoreDownloadFlow_Fail_LocaleNotApplicable", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -522,14 +507,13 @@ TEST_CASE("MSStoreDownloadFlow_Fail_LocaleNotApplicable", "[MSStoreDownloadFlow]
     context.Args.AddArg(Execution::Args::Type::Locale, "ja-JP"sv);
 
     DownloadCommand download({});
-    REQUIRE_THROWS_HR(download.Execute(context), APPINSTALLER_CLI_ERROR_NO_APPLICABLE_DISPLAYCATALOG_PACKAGE);
+    download.Execute(context);
+    REQUIRE_TERMINATED_WITH(context, APPINSTALLER_CLI_ERROR_NO_APPLICABLE_DISPLAYCATALOG_PACKAGE);
     INFO(downloadOutput.str());
 }
 
 TEST_CASE("MSStoreDownloadFlow_Fail_ArchitectureNotApplicable", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -544,14 +528,13 @@ TEST_CASE("MSStoreDownloadFlow_Fail_ArchitectureNotApplicable", "[MSStoreDownloa
     context.Args.AddArg(Execution::Args::Type::InstallArchitecture, "arm64"sv);
 
     DownloadCommand download({});
-    REQUIRE_THROWS_HR(download.Execute(context), APPINSTALLER_CLI_ERROR_NO_APPLICABLE_DISPLAYCATALOG_PACKAGE);
+    download.Execute(context);
+    REQUIRE_TERMINATED_WITH(context, APPINSTALLER_CLI_ERROR_NO_APPLICABLE_DISPLAYCATALOG_PACKAGE);
     INFO(downloadOutput.str());
 }
 
 TEST_CASE("MSStoreDownloadFlow_Fail_PlatformNotApplicable", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
-
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -566,14 +549,34 @@ TEST_CASE("MSStoreDownloadFlow_Fail_PlatformNotApplicable", "[MSStoreDownloadFlo
     context.Args.AddArg(Execution::Args::Type::Platform, "Windows.Holographic"sv);
 
     DownloadCommand download({});
-    REQUIRE_THROWS_HR(download.Execute(context), APPINSTALLER_CLI_ERROR_NO_APPLICABLE_SFSCLIENT_PACKAGE);
+    download.Execute(context);
+    REQUIRE_TERMINATED_WITH(context, APPINSTALLER_CLI_ERROR_NO_APPLICABLE_SFSCLIENT_PACKAGE);
     INFO(downloadOutput.str());
 }
 
 TEST_CASE("MSStoreDownloadFlow_Fail_Licensing", "[MSStoreDownloadFlow][workflow]")
 {
-    auto enableFeature = TestUserSettings::EnableExperimentalFeature(AppInstaller::Settings::ExperimentalFeature::Feature::StoreDownload);
+    TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
+    std::ostringstream downloadOutput;
+    TestContext context{ downloadOutput, std::cin };
+    auto previousThreadGlobals = context.SetForCurrentThread();
+    OverrideDownloadInstallerFileForMSStoreDownload(context);
+    TestHook::SetDisplayCatalogHttpPipelineStage_Override displayCatalogOverride(GetTestRestRequestHandler(web::http::status_codes::OK, TestDisplayCatalogResponse));
+    TestHook::SetSfsClientAppContents_Override sfsClientOverride({ &GetSfsAppContentsOverrideFunction });
+    TestHook::SetLicensingHttpPipelineStage_Override licensingOverride(GetTestRestRequestHandler(web::http::status_codes::InternalError));
+    context.Args.AddArg(Execution::Args::Type::Manifest, TestDataFile("DownloadFlowTest_MSStore.yaml").GetPath().u8string());
+    context.Args.AddArg(Execution::Args::Type::DownloadDirectory, tempDirectory);
+    context.Args.AddArg(Execution::Args::Type::Locale, "en-US"sv);
+
+    DownloadCommand download({});
+    download.Execute(context);
+    REQUIRE_TERMINATED_WITH(context, MAKE_HRESULT(SEVERITY_ERROR, FACILITY_HTTP, web::http::status_codes::InternalError));
+    INFO(downloadOutput.str());
+}
+
+TEST_CASE("MSStoreDownloadFlow_Fail_Licensing_Forbidden", "[MSStoreDownloadFlow][workflow]")
+{
     TestCommon::TempDirectory tempDirectory("TestDownloadDirectory", false);
 
     std::ostringstream downloadOutput;
@@ -588,6 +591,7 @@ TEST_CASE("MSStoreDownloadFlow_Fail_Licensing", "[MSStoreDownloadFlow][workflow]
     context.Args.AddArg(Execution::Args::Type::Locale, "en-US"sv);
 
     DownloadCommand download({});
-    REQUIRE_THROWS_HR(download.Execute(context), MAKE_HRESULT(SEVERITY_ERROR, FACILITY_HTTP, web::http::status_codes::Forbidden));
+    download.Execute(context);
+    REQUIRE_TERMINATED_WITH(context, APPINSTALLER_CLI_ERROR_LICENSING_API_FAILED_FORBIDDEN);
     INFO(downloadOutput.str());
 }

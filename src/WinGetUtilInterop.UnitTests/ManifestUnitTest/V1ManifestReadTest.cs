@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // <copyright file="V1ManifestReadTest.cs" company="Microsoft Corporation">
 //     Copyright (c) Microsoft Corporation. Licensed under the MIT License.
 // </copyright>
@@ -35,6 +35,7 @@ namespace WinGetUtilInterop.UnitTests.ManifestUnitTest
             V110,
             V160,
             V170,
+            V190,
         }
 
         /// <summary>
@@ -63,6 +64,11 @@ namespace WinGetUtilInterop.UnitTests.ManifestUnitTest
                 Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "TestCollateral", ManifestStrings.V170ManifestMerged));
 
             this.ValidateManifestFields(v170manifest, TestManifestVersion.V170);
+
+            Manifest v190manifest = Manifest.CreateManifestFromPath(
+                Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "TestCollateral", ManifestStrings.V190ManifestMerged));
+
+            this.ValidateManifestFields(v190manifest, TestManifestVersion.V190);
         }
 
         /// <summary>
@@ -258,12 +264,19 @@ namespace WinGetUtilInterop.UnitTests.ManifestUnitTest
 
                 Assert.True(manifest.DisplayInstallWarnings);
                 Assert.True(manifest.DownloadCommandProhibited);
+
+                Assert.Equal("https://defaultReturnResponseUrl.com", manifest.ExpectedReturnCodes[0].ReturnResponseUrl);
             }
 
             if (manifestVersion >= TestManifestVersion.V170)
             {
                 Assert.Equal("/repair", defaultSwitches.Repair);
                 Assert.Equal("uninstaller", manifest.RepairBehavior);
+            }
+
+            if (manifestVersion >= TestManifestVersion.V190)
+            {
+                Assert.True(manifest.ArchiveBinariesDependOnPath);
             }
 
             // Individual installers
@@ -362,12 +375,20 @@ namespace WinGetUtilInterop.UnitTests.ManifestUnitTest
 
                 Assert.True(installer1.DisplayInstallWarnings);
                 Assert.True(installer1.DownloadCommandProhibited);
+
+                Assert.Equal("https://returnResponseUrl.com", installer1.ExpectedReturnCodes[0].ReturnResponseUrl);
             }
 
             if (manifestVersion >= TestManifestVersion.V170)
             {
                 Assert.Equal("/r", installer1Switches.Repair);
                 Assert.Equal("modify", installer1.RepairBehavior);
+            }
+
+            if (manifestVersion >= TestManifestVersion.V190)
+            {
+                Assert.False(installer1.ArchiveBinariesDependOnPath);
+                Assert.Equal("fakeIdentifier", installer2.ProductId);
             }
 
             // Additional Localizations
@@ -447,6 +468,11 @@ namespace WinGetUtilInterop.UnitTests.ManifestUnitTest
             /// Merged v1.7 manifest.
             /// </summary>
             public const string V170ManifestMerged = "V1_7ManifestMerged.yaml";
+
+            /// <summary>
+            /// Merged v1.9 manifest.
+            /// </summary>
+            public const string V190ManifestMerged = "V1_9ManifestMerged.yaml";
 
             /// <summary>
             /// Merged v1 manifest without localization.

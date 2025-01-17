@@ -17,7 +17,9 @@ appxsdk
 APSTUDIO
 ARRAYSIZE
 artifactstagingdirectory
+Asn
 aspirational
+Authenticode
 AUTOLISTEN
 azureedge
 binlog
@@ -40,8 +42,7 @@ COMMANDBARFLYOUT
 COMMONDATA
 comparand
 conemu
-contosa
-contosainstaller
+contoso
 COSTDEFERRED
 cotaskmem
 cpprest
@@ -69,6 +70,7 @@ denelon
 depersist
 differentpath
 DIRECTONLY
+DISMAPI
 distro
 dllmain
 dotnet
@@ -143,9 +145,11 @@ INVALIDARG
 INVALIDSID
 iot
 IPinning
+ipmo
 IPortable
 ISAPPROVEDFOROUTPUT
 IUnknown
+JDKs
 langutil
 lastwritetime
 LCIDTo
@@ -163,6 +167,7 @@ MAKEINTRESOURCE
 makemsix
 MANIFESTSCHEMA
 MANIFESTVERSION
+meme
 metadatas
 Minimatch
 Moq
@@ -194,6 +199,7 @@ norestart
 normalizednameandpublisher
 normalizedpackagenameandpublisher
 notcontains
+NTAPI
 NTSTATUS
 nullsoft
 nunit
@@ -209,6 +215,9 @@ packagefamilyname
 packageidentifier
 packagename
 PACKAGESSCHEMA
+paket
+Params
+params
 parentidx
 pathpart
 Pathto
@@ -224,11 +233,14 @@ pinningindex
 pipssource
 Pkcs
 portableindex
+powertoys
 pplx
 ppv
 PRECONFIG
 preindexed
 prepareforpackaging
+prepopulate
+prepopulated
 prioritization
 processthreadsapi
 PRODUCTNAME
@@ -251,6 +263,7 @@ removemanifest
 removepin
 removeportablefile
 repolibtest
+requeue
 rescap
 resetpins
 resheader
@@ -264,6 +277,7 @@ rethrowing
 roadmap
 robuffer
 rowcount
+rowids
 rubengustorage
 ruleset
 runas
@@ -287,8 +301,11 @@ SHTDN
 shtypes
 signtool
 silentwithprogress
+Silverlight
 simplesave
 simpletest
+sixel
+sixels
 sln
 sqlbuilder
 sqliteicu
@@ -330,7 +347,7 @@ Testrun
 testsettingname
 TEXTFORMAT
 TEXTINCLUDE
-Threadpool
+threadpool
 tpl
 TRACELOGGING
 triaged
@@ -371,15 +388,17 @@ vcvars
 vcxitems
 VERYSILENT
 VFT
+visualstudio
 VOS
 vso
 wapproj
 wcsicmp
 webpage
+websites
 WHOLECHAIN
 wil
-windbg
 wincrypt
+windbg
 WINEVENT
 winget
 winhttp

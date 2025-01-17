@@ -9,7 +9,7 @@
     <ProjectGuid>{5890d6ed-7c3b-40f3-b436-b54f640d9e65}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>AppInstallerLoggingCore</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
     <WindowsTargetPlatformMinVersion>10.0.17763.0</WindowsTargetPlatformMinVersion>
     <WindowsSDKDesktopARMSupport>true</WindowsSDKDesktopARMSupport>
     <WindowsSDKDesktopARM64Support>true</WindowsSDKDesktopARM64Support>
@@ -243,6 +243,11 @@
       <AdditionalOptions>%(AdditionalOptions) /permissive- /D _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(UseProdCLSIDs)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>USE_PROD_CLSIDS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -422,6 +427,7 @@
     <ClInclude Include="Public\winget\Archive.h" />
     <ClInclude Include="Public\winget\ExperimentalFeature.h" />
     <ClInclude Include="Public\winget\ExtensionCatalog.h" />
+    <ClInclude Include="Public\winget\Fonts.h" />
     <ClInclude Include="Public\winget\HttpClientHelper.h">
       <ExcludedFromBuild Condition="'$(Configuration)'=='Fuzzing'">true</ExcludedFromBuild>
     </ClInclude>
@@ -441,8 +447,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)'=='Fuzzing'">true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Public\winget\NameNormalization.h" />
-    <ClInclude Include="Public\winget\Filesystem.h" />
     <ClInclude Include="Public\winget\NetworkSettings.h" />
+    <ClInclude Include="Public\winget\OutputDebugStringLogger.h" />
     <ClInclude Include="Public\winget\PackageDependenciesValidationUtil.h" />
     <ClInclude Include="Public\winget\PackageVersionDataManifest.h" />
     <ClInclude Include="Public\winget\Pin.h" />
@@ -468,13 +474,13 @@
     <ClCompile Include="DependenciesGraph.cpp" />
     <ClCompile Include="DODownloader.cpp" />
     <ClCompile Include="FileCache.cpp" />
-    <ClCompile Include="Filesystem.cpp" />
     <ClCompile Include="FolderFileWatcher.cpp" />
     <ClCompile Include="Deployment.cpp" />
     <ClCompile Include="Downloader.cpp" />
     <ClCompile Include="ExperimentalFeature.cpp" />
     <ClCompile Include="ExtensionCatalog.cpp" />
     <ClCompile Include="FileLogger.cpp" />
+    <ClCompile Include="Fonts.cpp" />
     <ClCompile Include="HttpClientHelper.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'=='Fuzzing'">true</ExcludedFromBuild>
     </ClCompile>
@@ -499,6 +505,7 @@
     </ClCompile>
     <ClCompile Include="NameNormalization.cpp" />
     <ClCompile Include="NetworkSettings.cpp" />
+    <ClCompile Include="OutputDebugStringLogger.cpp" />
     <ClCompile Include="PackageDependenciesValidationUtil.cpp" />
     <ClCompile Include="PackageVersionDataManifest.cpp" />
     <ClCompile Include="Pin.cpp" />

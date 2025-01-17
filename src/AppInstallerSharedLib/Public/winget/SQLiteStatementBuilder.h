@@ -112,6 +112,7 @@ namespace AppInstaller::SQLite::Builder
         Text,
         Blob,
         Integer, // Type for specifying a primary key column as a row id alias.
+        None, // Does not declare a type
     };
 
     template <Type type, bool allowNull>
@@ -281,6 +282,7 @@ namespace AppInstaller::SQLite::Builder
         StatementBuilder& Equals(details::unbound_t, std::optional<size_t> index = {});
         StatementBuilder& Equals(std::nullptr_t);
         StatementBuilder& Equals();
+        StatementBuilder& Equals(const QualifiedColumn& column);
 
         template <typename ValueType>
         StatementBuilder& IsGreaterThan(const ValueType& value)
@@ -300,8 +302,6 @@ namespace AppInstaller::SQLite::Builder
 
         StatementBuilder& LikeWithEscape(std::string_view value);
         StatementBuilder& Like(details::unbound_t);
-
-        StatementBuilder& LiteralColumn(std::string_view value);
 
         StatementBuilder& Escape(std::string_view escapeChar);
 
@@ -342,6 +342,7 @@ namespace AppInstaller::SQLite::Builder
         // Specify the ordering to use.
         StatementBuilder& OrderBy(std::string_view column);
         StatementBuilder& OrderBy(const QualifiedColumn& column);
+        StatementBuilder& OrderBy(std::initializer_list<std::string_view> columns);
 
         // Specify the ordering behavior.
         StatementBuilder& Ascending();
@@ -377,6 +378,17 @@ namespace AppInstaller::SQLite::Builder
         StatementBuilder& Column(Aggregate aggOp, const QualifiedColumn& column);
         StatementBuilder& Column(const details::SubBuilder& column);
         StatementBuilder& EndColumns();
+
+        // Set the columns null constraint.
+        StatementBuilder& NotNull(bool isTrue = true);
+
+        // Set the column's default value.
+        template <typename ValueType>
+        StatementBuilder& Default(const ValueType& value)
+        {
+            m_stream << " DEFAULT (" << value << ")";
+            return *this;
+        }
 
         // Add the values clause for an insert statement.
         template <typename... ValueTypes>

@@ -70,6 +70,9 @@ namespace ConfigurationRemotingServer
 
         static int Main(string[] args)
         {
+            // Remove any attached console to prevent modules (or their actions) from writing to our console.
+            FreeConsole();
+
             // Help find WindowsPackageManager.dll
             AssemblyLoadContext.Default.ResolvingUnmanagedDll += NativeAssemblyLoadContext.ResolvingUnmanagedHandler;
 
@@ -144,6 +147,20 @@ namespace ConfigurationRemotingServer
                     if (metadataJson != null)
                     {
                         limitationSet.Path = metadataJson.Path;
+
+                        if (metadataJson.ModulePath != null)
+                        {
+                            PowerShellConfigurationProcessorLocation parsedLocation = PowerShellConfigurationProcessorLocation.Default;
+                            if (Enum.TryParse<PowerShellConfigurationProcessorLocation>(metadataJson.ModulePath, out parsedLocation))
+                            {
+                                factory.Location = parsedLocation;
+                            }
+                            else
+                            {
+                                factory.Location = PowerShellConfigurationProcessorLocation.Custom;
+                                factory.CustomLocation = metadataJson.ModulePath;
+                            }
+                        }
                     }
 
                     // Set the limitation set in factory.
@@ -165,6 +182,9 @@ namespace ConfigurationRemotingServer
         {
             [JsonPropertyName("path")]
             public string Path { get; set; } = string.Empty;
+
+            [JsonPropertyName("modulePath")]
+            public string? ModulePath { get; set; } = null;
         }
 
         private static string GetExternalModulesPath()
@@ -196,5 +216,9 @@ namespace ConfigurationRemotingServer
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr GetCommandLineW();
+
+        [DllImport("kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool FreeConsole();
     }
 }

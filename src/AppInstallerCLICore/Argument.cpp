@@ -198,11 +198,17 @@ namespace AppInstaller::CLI
         case Execution::Args::Type::IgnoreResumeLimit:
             return { type, "ignore-resume-limit"_liv, ArgTypeCategory::None };
 
+        // Font command
+        case Execution::Args::Type::Family:
+            return { type, "family"_liv, ArgTypeCategory::None };
+
         // Configuration commands
         case Execution::Args::Type::ConfigurationFile:
-            return { type, "file"_liv, 'f' };
+            return { type, "file"_liv, 'f', ArgTypeCategory::ConfigurationSetChoice, ArgTypeExclusiveSet::ConfigurationSetChoice };
         case Execution::Args::Type::ConfigurationAcceptWarning:
             return { type, "accept-configuration-agreements"_liv };
+        case Execution::Args::Type::ConfigurationSuppressPrologue:
+            return { type, "suppress-initial-details"_liv };
         case Execution::Args::Type::ConfigurationEnable:
             return { type, "enable"_liv, ArgTypeCategory::None, ArgTypeExclusiveSet::StubType };
         case Execution::Args::Type::ConfigurationDisable:
@@ -215,6 +221,12 @@ namespace AppInstaller::CLI
             return { type, "module"_liv };
         case Execution::Args::Type::ConfigurationExportResource:
             return { type, "resource"_liv };
+        case Execution::Args::Type::ConfigurationHistoryItem:
+            return { type, "history"_liv, 'h', ArgTypeCategory::ConfigurationSetChoice, ArgTypeExclusiveSet::ConfigurationSetChoice };
+        case Execution::Args::Type::ConfigurationHistoryRemove:
+            return { type, "remove"_liv };
+        case Execution::Args::Type::ConfigurationStatusWatch:
+            return { type, "live"_liv };
 
         // Download command
         case Execution::Args::Type::DownloadDirectory:
@@ -265,9 +277,9 @@ namespace AppInstaller::CLI
 
         // Authentication arguments
         case Execution::Args::Type::AuthenticationMode:
-            return { type, "authentication-mode"_liv };
+            return { type, "authentication-mode"_liv, ArgTypeCategory::CopyValueToSubContext };
         case Execution::Args::Type::AuthenticationAccount:
-            return { type, "authentication-account"_liv };
+            return { type, "authentication-account"_liv, ArgTypeCategory::CopyValueToSubContext };
 
         // Used for demonstration purposes
         case Execution::Args::Type::ExperimentalArg:
@@ -415,13 +427,15 @@ namespace AppInstaller::CLI
         case Args::Type::IgnoreResumeLimit:
             return Argument{ type, Resource::String::IgnoreResumeLimitArgumentDescription, ArgumentType::Flag, ExperimentalFeature::Feature::Resume };
         case Args::Type::AllVersions:
-            return Argument{ type, Resource::String::UninstallAllVersionsArgumentDescription, ArgumentType::Flag, Argument::Visibility::Help, ExperimentalFeature::Feature::SideBySide };
+            return Argument{ type, Resource::String::UninstallAllVersionsArgumentDescription, ArgumentType::Flag, Argument::Visibility::Help };
         case Args::Type::TargetVersion:
             return Argument{ type, Resource::String::TargetVersionArgumentDescription, ArgumentType::Standard };
         case Args::Type::Proxy:
             return Argument{ type, Resource::String::ProxyArgumentDescription, ArgumentType::Standard, TogglePolicy::Policy::ProxyCommandLineOptions, BoolAdminSetting::ProxyCommandLineOptions };
         case Args::Type::NoProxy:
             return Argument{ type, Resource::String::NoProxyArgumentDescription, ArgumentType::Flag, TogglePolicy::Policy::ProxyCommandLineOptions, BoolAdminSetting::ProxyCommandLineOptions };
+        case Args::Type::Family:
+            return Argument{ type, Resource::String::FontFamilyNameArgumentDescription, ArgumentType::Positional, false };
         default:
             THROW_HR(E_UNEXPECTED);
         }

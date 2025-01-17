@@ -8,8 +8,10 @@
 
 #include "ConfigurationSetSerializer.h"
 #include "ConfigurationSetSerializer_0_2.h"
+#include "ConfigurationSetSerializer_0_3.h"
 #include "ConfigurationSetUtilities.h"
 
+using namespace AppInstaller::Utility;
 using namespace AppInstaller::YAML;
 using namespace winrt::Windows::Foundation;
 
@@ -20,15 +22,19 @@ namespace winrt::Microsoft::Management::Configuration::implementation
         static constexpr std::string_view s_nullValue = "null";
     }
 
-    std::unique_ptr<ConfigurationSetSerializer> ConfigurationSetSerializer::CreateSerializer(hstring version)
+    std::unique_ptr<ConfigurationSetSerializer> ConfigurationSetSerializer::CreateSerializer(hstring version, bool strictVersionMatching)
     {
         // Create the parser based on the version selected
-        AppInstaller::Utility::SemanticVersion schemaVersion(std::move(winrt::to_string(version)));
+        SemanticVersion schemaVersion(std::move(winrt::to_string(version)));
 
         // TODO: Consider having the version/uri/type information all together in the future
         if (schemaVersion.PartAt(0).Integer == 0 && schemaVersion.PartAt(1).Integer == 1)
         {
-            throw E_NOTIMPL;
+            // Remove this once the 0.1 serializer is implemented.
+            THROW_HR_IF(E_NOTIMPL, strictVersionMatching);
+
+            return std::make_unique<ConfigurationSetSerializer_0_2>();
+
         }
         else if (schemaVersion.PartAt(0).Integer == 0 && schemaVersion.PartAt(1).Integer == 2)
         {
@@ -36,22 +42,54 @@ namespace winrt::Microsoft::Management::Configuration::implementation
         }
         else if (schemaVersion.PartAt(0).Integer == 0 && schemaVersion.PartAt(1).Integer == 3)
         {
-            throw E_NOTIMPL;
+            return std::make_unique<ConfigurationSetSerializer_0_3>();
         }
         else
         {
             AICLI_LOG(Config, Error, << "Unknown configuration version: " << schemaVersion.ToString());
-            throw E_UNEXPECTED;
+            THROW_HR(E_UNEXPECTED);
         }
     }
 
-    void ConfigurationSetSerializer::WriteYamlValueSet(AppInstaller::YAML::Emitter& emitter, const Windows::Foundation::Collections::ValueSet& valueSet)
+    std::string ConfigurationSetSerializer::SerializeValueSet(const Windows::Foundation::Collections::ValueSet& valueSet)
     {
+        Emitter emitter;
+        WriteYamlValueSet(emitter, valueSet);
+        return emitter.str();
+    }
+
+    std::string ConfigurationSetSerializer::SerializeStringArray(const Windows::Foundation::Collections::IVector<hstring>& stringArray)
+    {
+        Emitter emitter;
+        WriteYamlStringArray(emitter, stringArray);
+        return emitter.str();
+    }
+
+    void ConfigurationSetSerializer::WriteYamlValueSetIfNotEmpty(AppInstaller::YAML::Emitter& emitter, ConfigurationField key, const Windows::Foundation::Collections::ValueSet& valueSet)
+    {
+        if (valueSet && valueSet.Size() != 0)
+        {
+            emitter << Key << GetConfigurationFieldName(key);
+            WriteYamlValueSet(emitter, valueSet);
+        }
+    }
+
+    void ConfigurationSetSerializer::WriteYamlValueSet(AppInstaller::YAML::Emitter& emitter, const Windows::Foundation::Collections::ValueSet& valueSet, std::initializer_list<ConfigurationField> exclusions)
+    {
+        // Create a sorted list of the field names to exclude
+        std::vector<winrt::hstring> exclusionStrings;
+        for (ConfigurationField field : exclusions)
+        {
+            exclusionStrings.emplace_back(GetConfigurationFieldNameHString(field));
+        }
+        std::sort(exclusionStrings.begin(), exclusionStrings.end());
+
         emitter << BeginMap;
 
         for (const auto& [key, value] : valueSet)
         {
-            if (value != nullptr)
+            if (value != nullptr &&
+                !std::binary_search(exclusionStrings.begin(), exclusionStrings.end(), key))
             {
                 std::string keyName = winrt::to_string(key);
                 emitter << Key << keyName << Value;
@@ -62,6 +100,17 @@ namespace winrt::Microsoft::Management::Configuration::implementation
         emitter << EndMap;
     }
 
+    void ConfigurationSetSerializer::WriteYamlStringArray(AppInstaller::YAML::Emitter& emitter, const Windows::Foundation::Collections::IVector<hstring>& values)
+    {
+        emitter << BeginSeq;
+
+        for (const auto& value : values)
+        {
+            emitter << ConvertToUTF8(value);
+        }
+
+        emitter << EndSeq;
+    }
 
     void ConfigurationSetSerializer::WriteYamlValue(AppInstaller::YAML::Emitter& emitter, const winrt::Windows::Foundation::IInspectable& value)
     {
@@ -94,7 +143,7 @@ namespace winrt::Microsoft::Management::Configuration::implementation
                 }
                 else if (type == PropertyType::String)
                 {
-                    emitter << AppInstaller::Utility::ConvertToUTF8(property.GetString());
+                    emitter << ScalarStyle::DoubleQuoted << ConvertToUTF8(property.GetString());
                 }
                 else if (type == PropertyType::Int64)
                 {
@@ -102,9 +151,26 @@ namespace winrt::Microsoft::Management::Configuration::implementation
                 }
                 else
                 {
-                    THROW_HR(E_NOTIMPL);;
+                    THROW_HR(E_NOTIMPL);
                 }
             }
+        }
+    }
+
+    void ConfigurationSetSerializer::WriteYamlValueIfNotEmpty(AppInstaller::YAML::Emitter& emitter, ConfigurationField key, const winrt::Windows::Foundation::IInspectable& value)
+    {
+        if (value != nullptr)
+        {
+            emitter << Key << GetConfigurationFieldName(key) << Value;
+            WriteYamlValue(emitter, value);
+        }
+    }
+
+    void ConfigurationSetSerializer::WriteYamlStringValueIfNotEmpty(AppInstaller::YAML::Emitter& emitter, ConfigurationField key, hstring value)
+    {
+        if (!value.empty())
+        {
+            emitter << Key << GetConfigurationFieldName(key) << Value << ConvertToUTF8(value);
         }
     }
 
@@ -137,64 +203,8 @@ namespace winrt::Microsoft::Management::Configuration::implementation
         emitter << EndSeq;
     }
 
-    void ConfigurationSetSerializer::WriteYamlConfigurationUnits(AppInstaller::YAML::Emitter& emitter, const std::vector<ConfigurationUnit>& units)
+    std::wstring_view ConfigurationSetSerializer::GetSchemaVersionCommentPrefix()
     {
-        emitter << BeginSeq;
-
-        for (const auto& unit : units)
-        {
-            // Resource
-            emitter << BeginMap;
-            emitter << Key << GetConfigurationFieldName(ConfigurationField::Resource) << Value << AppInstaller::Utility::ConvertToUTF8(GetResourceName(unit));
-
-            // Id
-            if (!unit.Identifier().empty())
-            {
-                emitter << Key << GetConfigurationFieldName(ConfigurationField::Id) << Value << AppInstaller::Utility::ConvertToUTF8(unit.Identifier());
-            }
-
-            // Dependencies
-            if (unit.Dependencies().Size() > 0)
-            {
-                emitter << Key << GetConfigurationFieldName(ConfigurationField::DependsOn);
-                emitter << BeginSeq;
-
-                for (const auto& dependency : unit.Dependencies())
-                {
-                    emitter << AppInstaller::Utility::ConvertToUTF8(dependency);
-                }
-
-                emitter << EndSeq;
-            }
-
-            // Directives
-            WriteResourceDirectives(emitter, unit);
-
-            // Settings
-            const auto& settings = unit.Settings();
-            emitter << Key << GetConfigurationFieldName(ConfigurationField::Settings);
-            WriteYamlValueSet(emitter, settings);
-
-            emitter << EndMap;
-        }
-
-        emitter << EndSeq;
-    }
-
-    winrt::hstring ConfigurationSetSerializer::GetResourceName(const ConfigurationUnit& unit)
-    {
-        return unit.Type();
-    }
-
-    void ConfigurationSetSerializer::WriteResourceDirectives(AppInstaller::YAML::Emitter& emitter, const ConfigurationUnit& unit)
-    {
-        const auto& metadata = unit.Metadata();
-        emitter << Key << GetConfigurationFieldName(ConfigurationField::Directives);
-        WriteYamlValueSet(emitter, metadata);
-    }
-
-    winrt::hstring ConfigurationSetSerializer::GetSchemaVersionComment(winrt::hstring version)
-    {
-        return winrt::to_hstring(L"# yaml-language-server: $schema=https://aka.ms/configuration-dsc-schema/") + version;
+        return L"# yaml-language-server: $schema=https://aka.ms/configuration-dsc-schema/"sv;
     }
 }
